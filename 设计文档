@@ -1,0 +1,1686 @@
+基于您提供的详细设计文档，我将为您提供一个基于 **Python** 的后端实现方案。方案选用 **FastAPI** 框架，配合 **SQLAlchemy** ORM、**Alembic** 数据库迁移工具、**PyJWT** 鉴权、**PyCryptodome** 加解密，并充分利用异步特性保证高并发场景下的性能。
+
+---
+
+# 游戏代练交易平台 - Python 后端实现指南
+
+## 1. 技术栈选择
+
+| 组件 | 技术选型 | 说明 |
+|------|----------|------|
+| 框架 | FastAPI | 高性能、异步支持、自动生成 OpenAPI 文档 |
+| ORM | SQLAlchemy 2.0+ | 强大的异步 ORM 支持（async-sqlalchemy） |
+| 数据库 | MySQL 8.0 / MariaDB 10.6+ | 使用 aiomysql 驱动 |
+| 迁移工具 | Alembic | 管理数据库版本变更 |
+| 认证 | PyJWT + python-jose | JWT 生成与验证 |
+| 密码加密 | passlib[bcrypt] | 用户密码哈希 |
+| 账号加密 | PyCryptodome | AES-256-CBC 加解密 |
+| 缓存/会话 | Redis (可选) | 用于存储 JWT 黑名单、热点数据 |
+| 异步任务 | Celery + Redis/RabbitMQ | 处理异步通知、日志写入等 |
+| 日志 | logging + structlog | 结构化日志，便于追踪 |
+| 配置管理 | pydantic-settings | 基于 Pydantic 的配置管理 |
+
+## 2. 项目结构
+
+```
+game-boost-platform/
+├── app/
+│   ├── api/                      # API 路由层
+│   │   ├── dependencies/         # 依赖注入（鉴权、分页等）
+│   │   ├── v1/
+│   │   │   ├── endpoints/
+│   │   │   │   ├── auth.py       # 登录、注册
+│   │   │   │   ├── orders.py     # 订单相关
+│   │   │   │   ├── games.py      # 游戏列表
+│   │   │   │   ├── projects.py   # 项目相关（用户/管理员）
+│   │   │   │   ├── conversations.py # 会话消息
+│   │   │   │   └── admin.py      # 管理员接口
+│   │   │   └── __init__.py
+│   │   └── __init__.py
+│   ├── core/                     # 核心模块
+│   │   ├── config.py             # 配置管理
+│   │   ├── security.py           # JWT 加解密、密码哈希
+│   │   ├── crypto.py             # AES 账号加密工具
+│   │   ├── dependencies.py       # 公共依赖（获取当前用户等）
+│   │   └── exceptions.py         # 自定义异常
+│   ├── models/                   # SQLAlchemy 模型
+│   │   ├── user.py               # users, handlers, admins
+│   │   ├── game.py               # games, projects
+│   │   ├── order.py              # orders, order_logs
+│   │   └── message.py            # conversations, messages, read_status
+│   ├── schemas/                  # Pydantic 模型（请求/响应）
+│   │   ├── order.py
+│   │   ├── user.py
+│   │   └── ...
+│   ├── services/                 # 业务逻辑层
+│   │   ├── order_service.py
+│   │   ├── project_service.py
+│   │   ├── message_service.py
+│   │   └── ...
+│   ├── db/                       # 数据库连接
+│   │   ├── session.py            # 异步 session 管理
+│   │   └── base.py               # Base 模型基类
+│   ├── utils/                    # 工具函数
+│   │   ├── price_calculator.py   # 价格计算
+│   │   └── order_no_generator.py # 订单号生成
+│   └── main.py                   # FastAPI 应用入口
+├── alembic/                      # 迁移脚本目录
+├── requirements.txt
+├── .env                          # 环境变量
+└── README.md
+```
+
+## 3. 数据库模型定义（关键部分）
+
+使用 SQLAlchemy 2.0 风格定义模型，与设计文档中的表结构保持一致。以下仅展示核心模型代码，其他模型类推。
+
+```python
+# app/models/user.py
+from sqlalchemy import Column, Integer, String, DECIMAL, DateTime, TinyInt, Enum
+from sqlalchemy.sql import func
+from app.db.base import Base
+
+class User(Base):
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, nullable=False)
+    email = Column(String(100), unique=True, nullable=False)
+    phone = Column(String(20))
+    password = Column(String(255), nullable=False)
+    avatar = Column(String(255))
+    status = Column(TinyInt, default=1)
+    balance = Column(DECIMAL(10,2), default=0.00)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+class Handler(Base):
+    __tablename__ = "handlers"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, nullable=False)
+    email = Column(String(100), unique=True, nullable=False)
+    phone = Column(String(20))
+    password = Column(String(255), nullable=False)
+    avatar = Column(String(255))
+    status = Column(TinyInt, default=1)
+    balance = Column(DECIMAL(10,2), default=0.00)
+    level = Column(TinyInt, default=1)
+    total_orders = Column(Integer, default=0)
+    completion_rate = Column(DECIMAL(5,2), default=100.00)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+class Admin(Base):
+    __tablename__ = "admins"
+    id = Column(Integer, primary_key=True, index=True)
+    username = Column(String(50), unique=True, nullable=False)
+    email = Column(String(100), unique=True, nullable=False)
+    password = Column(String(255), nullable=False)
+    avatar = Column(String(255))
+    role = Column(Enum('super', 'operator'), default='operator')
+    status = Column(TinyInt, default=1)
+    last_login_at = Column(DateTime)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+```
+
+```python
+# app/models/order.py
+from sqlalchemy import Column, Integer, String, DECIMAL, DateTime, ForeignKey, JSON, Enum, Text
+from sqlalchemy.orm import relationship
+from app.db.base import Base
+
+class Order(Base):
+    __tablename__ = "orders"
+    id = Column(Integer, primary_key=True, index=True)
+    order_no = Column(String(32), unique=True, nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    game_id = Column(Integer, ForeignKey("games.id"), nullable=False)
+    project_id = Column(Integer, ForeignKey("projects.id"), nullable=True)
+    custom_name = Column(String(100))
+    custom_description = Column(Text)
+    custom_price = Column(DECIMAL(10,2))
+    quantity = Column(Integer, default=1)
+    unit_price = Column(DECIMAL(10,2), nullable=False)
+    total_amount = Column(DECIMAL(10,2), nullable=False)
+    status = Column(Enum('pending','accepted','in_progress','review','completed','cancelled','disputed'),
+                    default='pending', nullable=False)
+    handler_id = Column(Integer, ForeignKey("handlers.id"), nullable=True)
+    accepted_at = Column(DateTime)
+    account_info = Column(Text)  # 加密存储
+    requirements = Column(Text)
+    attachments = Column(JSON)
+    completion_proof = Column(JSON)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    completed_at = Column(DateTime)
+    cancelled_at = Column(DateTime)
+    user_rating = Column(Integer)
+    user_comment = Column(Text)
+    handler_rating = Column(Integer)
+    handler_comment = Column(Text)
+
+    # 关系（可选）
+    user = relationship("User")
+    handler = relationship("Handler")
+    game = relationship("Game")
+    project = relationship("Project")
+
+class OrderLog(Base):
+    __tablename__ = "order_logs"
+    id = Column(Integer, primary_key=True)
+    order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False)
+    operator_type = Column(Enum('user','handler','admin'), nullable=False)
+    operator_id = Column(Integer, nullable=False)
+    action = Column(String(50), nullable=False)
+    old_status = Column(String(20))
+    new_status = Column(String(20), nullable=False)
+    remark = Column(Text)
+    created_at = Column(DateTime, server_default=func.now())
+```
+
+## 4. 核心业务逻辑实现
+
+### 4.1 价格计算服务
+
+```python
+# app/services/price_calculator.py
+from decimal import Decimal
+
+def calculate_price(project, quantity: int = 1):
+    """
+    根据项目计价方式计算单价、总价和有效数量
+    :param project: Project 模型实例
+    :param quantity: 用户请求的数量
+    :return: dict
+    """
+    if project.price_type == 'fixed':
+        return {
+            'unit_price': project.price,
+            'total': project.price,
+            'quantity': 1
+        }
+    elif project.price_type == 'unit':
+        valid_qty = min(quantity, project.max_quantity or quantity)
+        return {
+            'unit_price': project.price,
+            'total': project.price * valid_qty,
+            'quantity': valid_qty
+        }
+    else:
+        raise ValueError("Invalid price_type")
+```
+
+### 4.2 订单号生成
+
+```python
+# app/utils/order_no_generator.py
+import time
+import random
+
+def generate_order_no():
+    """生成唯一订单号：时间戳 + 随机数 + 用户ID 后四位（可选）"""
+    timestamp = str(int(time.time() * 1000))
+    random_part = ''.join(random.choices('0123456789', k=4))
+    return f"BO{timestamp}{random_part}"
+```
+
+### 4.3 账号加密工具（AES-256-CBC）
+
+```python
+# app/core/crypto.py
+import base64
+import os
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+from app.core.config import settings
+
+class AccountCrypto:
+    def __init__(self):
+        self.key = base64.b64decode(settings.AES_SECRET_KEY)  # 从环境变量读取，BASE64编码的32字节密钥
+        self.iv = base64.b64decode(settings.AES_IV)           # 16字节IV
+
+    def encrypt(self, plain_text: str) -> str:
+        cipher = AES.new(self.key, AES.MODE_CBC, self.iv)
+        padded_data = pad(plain_text.encode('utf-8'), AES.block_size)
+        encrypted_bytes = cipher.encrypt(padded_data)
+        return base64.b64encode(encrypted_bytes).decode('utf-8')
+
+    def decrypt(self, encrypted_text: str) -> str:
+        encrypted_bytes = base64.b64decode(encrypted_text)
+        cipher = AES.new(self.key, AES.MODE_CBC, self.iv)
+        decrypted_padded = cipher.decrypt(encrypted_bytes)
+        return unpad(decrypted_padded, AES.block_size).decode('utf-8')
+```
+
+### 4.4 订单服务（含乐观锁接单）
+
+```python
+# app/services/order_service.py
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update
+from app.models.order import Order, OrderLog
+from app.models.user import User, Handler
+from app.schemas.order import OrderCreate, OrderStatusAction
+from app.core.exceptions import BusinessError
+from app.utils.order_no_generator import generate_order_no
+from app.services.price_calculator import calculate_price
+from app.core.crypto import AccountCrypto
+import json
+
+crypto = AccountCrypto()
+
+class OrderService:
+    @staticmethod
+    async def create_order(db: AsyncSession, user: User, order_data: OrderCreate):
+        # 1. 校验游戏存在且启用
+        # 2. 根据类型计算价格
+        if order_data.type == "standard":
+            # 查询项目
+            project = await db.get(Project, order_data.project_id)
+            if not project or project.status != 1:
+                raise BusinessError("项目不存在或已禁用")
+            price_info = calculate_price(project, order_data.quantity)
+            custom_name = None
+            custom_description = None
+            custom_price = None
+        else:  # custom
+            price_info = {
+                'unit_price': order_data.custom_price,
+                'total': order_data.custom_price,
+                'quantity': 1
+            }
+            project_id = None
+            custom_name = order_data.custom_name
+            custom_description = order_data.custom_description
+            custom_price = order_data.custom_price
+
+        # 3. 加密账号信息
+        encrypted_account = crypto.encrypt(order_data.account_info)
+
+        # 4. 创建订单
+        order = Order(
+            order_no=generate_order_no(),
+            user_id=user.id,
+            game_id=order_data.gameId,
+            project_id=project_id,
+            custom_name=custom_name,
+            custom_description=custom_description,
+            custom_price=custom_price,
+            quantity=price_info['quantity'],
+            unit_price=price_info['unit_price'],
+            total_amount=price_info['total'],
+            status='pending',
+            account_info=encrypted_account,
+            requirements=order_data.requirements,
+            attachments=order_data.attachments
+        )
+        db.add(order)
+        await db.flush()
+
+        # 5. 记录日志
+        log = OrderLog(
+            order_id=order.id,
+            operator_type='user',
+            operator_id=user.id,
+            action='create',
+            new_status='pending'
+        )
+        db.add(log)
+        await db.commit()
+        await db.refresh(order)
+        return order
+
+    @staticmethod
+    async def accept_order(db: AsyncSession, order_id: int, handler: Handler):
+        """接单 - 乐观锁实现"""
+        # 使用 UPDATE ... WHERE 乐观锁
+        stmt = (
+            update(Order)
+            .where(Order.id == order_id, Order.status == 'pending')
+            .values(status='accepted', handler_id=handler.id, accepted_at=func.now())
+            .returning(Order)
+        )
+        result = await db.execute(stmt)
+        updated_order = result.scalar_one_or_none()
+        if not updated_order:
+            raise BusinessError("订单已被抢单或状态已变更", code=409)
+
+        # 记录日志
+        log = OrderLog(
+            order_id=order_id,
+            operator_type='handler',
+            operator_id=handler.id,
+            action='accept',
+            old_status='pending',
+            new_status='accepted'
+        )
+        db.add(log)
+        await db.commit()
+        await db.refresh(updated_order)
+        return updated_order
+```
+
+## 5. 依赖注入与鉴权
+
+### 5.1 JWT 管理
+
+```python
+# app/core/security.py
+from datetime import datetime, timedelta
+from jose import jwt, JWTError
+from passlib.context import CryptContext
+from app.core.config import settings
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def create_access_token(data: dict, expires_delta: timedelta = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+```
+
+### 5.2 获取当前用户依赖（支持多角色）
+
+```python
+# app/api/dependencies/auth.py
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import JWTError, jwt
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.db.session import get_db
+from app.core.config import settings
+from app.models.user import User, Handler, Admin
+from app.core.exceptions import AuthError
+
+security = HTTPBearer()
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db)
+):
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: int = payload.get("sub")
+        role: str = payload.get("role")
+        if user_id is None or role is None:
+            raise AuthError("无效的认证凭据")
+    except JWTError:
+        raise AuthError("无效的认证凭据")
+
+    # 根据 role 查询对应的表
+    if role == "user":
+        user = await db.get(User, user_id)
+    elif role == "handler":
+        user = await db.get(Handler, user_id)
+    elif role == "admin":
+        user = await db.get(Admin, user_id)
+    else:
+        raise AuthError("无效的角色")
+
+    if not user or user.status != 1:
+        raise AuthError("用户不存在或已被禁用")
+    return user, role   # 返回用户对象和角色
+```
+
+### 5.3 权限依赖（用于接口）
+
+```python
+# app/api/dependencies/permissions.py
+from fastapi import Depends, HTTPException
+from app.api.dependencies.auth import get_current_user
+
+def require_role(allowed_roles: list):
+    async def dependency(user_role=Depends(get_current_user)):
+        user, role = user_role
+        if role not in allowed_roles:
+            raise HTTPException(status_code=403, detail="权限不足")
+        return user, role
+    return dependency
+
+# 使用示例：
+# @router.post("/orders", dependencies=[Depends(require_role(["user"]))])
+```
+
+## 6. API 路由示例（FastAPI）
+
+### 6.1 订单相关接口
+
+```python
+# app/api/v1/endpoints/orders.py
+from fastapi import APIRouter, Depends, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.api.dependencies.auth import get_current_user
+from app.api.dependencies.permissions import require_role
+from app.db.session import get_db
+from app.schemas.order import OrderCreate, OrderResponse, OrderStatusUpdate
+from app.services.order_service import OrderService
+from app.core.exceptions import BusinessError
+
+router = APIRouter(prefix="/orders", tags=["orders"])
+
+@router.post("", response_model=OrderResponse)
+async def create_order(
+    order_data: OrderCreate,
+    db: AsyncSession = Depends(get_db),
+    user_role=Depends(require_role(["user"]))
+):
+    user, _ = user_role
+    order = await OrderService.create_order(db, user, order_data)
+    return order
+
+@router.post("/{order_id}/accept", response_model=OrderResponse)
+async def accept_order(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    user_role=Depends(require_role(["handler"]))
+):
+    handler, _ = user_role
+    order = await OrderService.accept_order(db, order_id, handler)
+    return order
+
+@router.get("/pool", response_model=List[OrderPoolItem])
+async def get_order_pool(
+    game_id: int = Query(None),
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    user_role=Depends(require_role(["handler", "admin"]))
+):
+    # 实现分页查询 status='pending' 的订单，不返回账号信息
+    ...
+```
+
+### 6.2 异常处理
+
+```python
+# app/core/exceptions.py
+from fastapi import Request, status
+from fastapi.responses import JSONResponse
+
+class BusinessError(Exception):
+    def __init__(self, message: str, code: int = 400):
+        self.message = message
+        self.code = code
+
+# 在 main.py 中注册全局异常处理器
+@app.exception_handler(BusinessError)
+async def business_exception_handler(request: Request, exc: BusinessError):
+    return JSONResponse(
+        status_code=exc.code,
+        content={"code": exc.code, "message": exc.message, "data": None}
+    )
+```
+
+## 7. 配置管理（pydantic-settings）
+
+```python
+# app/core/config.py
+from pydantic_settings import BaseSettings
+from typing import Optional
+
+class Settings(BaseSettings):
+    PROJECT_NAME: str = "Game Boost Platform"
+    VERSION: str = "1.0.0"
+    DEBUG: bool = False
+
+    # JWT
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    # Database
+    DATABASE_URL: str
+
+    # AES Encryption
+    AES_SECRET_KEY: str   # BASE64 encoded 32-byte key
+    AES_IV: str           # BASE64 encoded 16-byte IV
+
+    # Redis (optional)
+    REDIS_URL: Optional[str] = None
+
+    class Config:
+        env_file = ".env"
+        env_file_encoding = "utf-8"
+
+settings = Settings()
+```
+
+## 8. 异步数据库会话管理
+
+```python
+# app/db/session.py
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+from app.core.config import settings
+
+engine = create_async_engine(
+    settings.DATABASE_URL,
+    echo=settings.DEBUG,
+    future=True,
+    pool_size=20,
+    max_overflow=10,
+)
+
+AsyncSessionLocal = sessionmaker(
+    engine, class_=AsyncSession, expire_on_commit=False
+)
+
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session
+```
+
+## 9. 安全注意事项
+
+1. **JWT 存储**：生产环境建议将 JWT 存储在 HttpOnly Cookie 中，避免 XSS 攻击。
+2. **敏感信息**：`account_info` 加密密钥务必从环境变量读取，严禁硬编码。
+3. **SQL 注入**：使用 SQLAlchemy ORM 或参数化查询，杜绝拼接 SQL。
+4. **并发控制**：接单使用数据库乐观锁（`UPDATE ... WHERE ... AND status='pending'`），返回影响行数判断。
+5. **日志脱敏**：记录日志时，确保不输出明文密码或账号信息。
+6. **限流**：对敏感接口（如接单）添加限流中间件，防止恶意刷单。
+
+## 10. 部署与运行
+
+### 10.1 依赖安装
+
+```bash
+pip install -r requirements.txt
+```
+
+`requirements.txt` 示例：
+
+```
+fastapi[all]==0.115.6
+uvicorn[standard]==0.34.0
+sqlalchemy==2.0.36
+aiomysql==0.2.0
+alembic==1.13.3
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.18
+pydantic-settings==2.5.2
+pycryptodome==3.21.0
+redis==5.2.0
+celery==5.4.0
+```
+
+### 10.2 数据库迁移
+
+```bash
+alembic init alembic
+# 编辑 alembic/env.py 配置数据库连接
+alembic revision --autogenerate -m "init"
+alembic upgrade head
+```
+
+### 10.3 启动服务
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### 10.4 使用 Gunicorn + Uvicorn 生产部署
+
+```bash
+gunicorn -w 4 -k uvicorn.workers.UvicornWorker app.main:app
+```
+
+---
+
+以上指南提供了将您的设计文档落地为 Python 后端代码的完整路径。您可以根据实际需求调整细节，如选择异步 ORM 或同步版本，但整体架构保持清晰分层，便于维护和扩展。
+# 数据库设计详细说明
+
+## 1. 设计概览
+
+本系统采用 **MySQL** 数据库，遵循 **第三范式** 原则进行设计。整体划分为四大模块：
+
+- **用户体系**：`users`、`handlers`、`admins` 三表独立，实现角色数据分离。
+- **业务主数据**：`games`、`projects`，支撑订单中的游戏与标准项目。
+- **核心业务**：`orders`、`order_logs`，管理订单全生命周期。
+- **沟通系统**：`conversations`、`messages`、`message_read_status`，支持多角色间的即时通讯。
+
+这种设计在保证数据一致性的同时，兼顾了未来扩展性和查询性能。
+
+---
+
+## 2. 用户体系设计（三表分离）
+
+### 2.1 设计思路
+不同角色拥有差异化的属性和业务逻辑，例如：
+- 普通用户（`users`）需要**账户余额**，用于支付订单；
+- 打手（`handlers`）需要**等级、完成订单总数、完成率**，用于信誉评估；
+- 管理员（`admins`）需要区分**超级管理员与运营**，并记录最后登录时间。
+
+将三者独立成表，避免了单表多角色带来的大量空字段和复杂权限控制。
+
+### 2.2 表结构详解
+
+#### `users` - 普通用户表
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT UNSIGNED | 主键，自增 |
+| username | VARCHAR(50) | 用户名，唯一索引 |
+| email | VARCHAR(100) | 邮箱，唯一索引 |
+| phone | VARCHAR(20) | 手机号，可为空 |
+| password | VARCHAR(255) | bcrypt 哈希后的密码 |
+| avatar | VARCHAR(255) | 头像 URL |
+| status | TINYINT | 1-正常，0-封禁 |
+| balance | DECIMAL(10,2) | 账户余额，精确到分 |
+| created_at | DATETIME | 创建时间，默认当前时间 |
+| updated_at | DATETIME | 更新时间，自动更新 |
+
+**索引**：
+- 主键：`id`
+- 唯一索引：`uk_username`、`uk_email`
+- 普通索引：`idx_status`，用于快速筛选启用/禁用的用户
+
+#### `handlers` - 打手表
+
+额外字段：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| level | TINYINT | 打手等级 1~5，默认 1 |
+| total_orders | INT UNSIGNED | 完成的订单总数 |
+| completion_rate | DECIMAL(5,2) | 完成率，计算公式 (完成数 / 接单总数) * 100 |
+
+**索引**：除与 `users` 相同的索引外，增加 `idx_level` 用于按等级排序（如订单分配优先高等级打手）。
+
+#### `admins` - 管理员表
+
+额外字段：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| role | ENUM('super','operator') | 超级管理员拥有全部权限；运营可管理项目和查看订单 |
+| last_login_at | DATETIME | 最后登录时间，用于审计 |
+
+**索引**：`idx_status` 用于快速筛选启用/禁用的管理员。
+
+---
+
+## 3. 游戏与项目设计
+
+### 3.1 设计思路
+- **游戏**是顶级分类，项目（代练内容）隶属于游戏。
+- 项目支持两种计价方式：固定价格（`fixed`）和单位计价（`unit`）。例如：固定价格表示“代练等级到30级，一口价100元”；单位计价表示“每1000金币收费10元，最多可买5000金币”。
+- 项目可排序、启用/禁用，便于前端展示和管理。
+
+### 3.2 表结构详解
+
+#### `games` - 游戏表
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT UNSIGNED | 主键 |
+| name | VARCHAR(100) | 游戏名称 |
+| icon | VARCHAR(255) | 游戏图标 URL |
+| status | TINYINT | 1-启用，0-禁用 |
+| created_at | DATETIME | 创建时间 |
+| updated_at | DATETIME | 更新时间 |
+
+**索引**：`idx_status` 用于筛选启用中的游戏。
+
+#### `projects` - 标准项目表
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT UNSIGNED | 主键 |
+| game_id | INT UNSIGNED | 外键，关联 `games.id` |
+| name | VARCHAR(100) | 项目名称，如“金币代刷” |
+| description | TEXT | 项目详细描述 |
+| price_type | ENUM('fixed','unit') | 计价方式 |
+| price | DECIMAL(10,2) | 单价或固定总价 |
+| unit_name | VARCHAR(20) | 单位名称，仅当 `price_type='unit'` 时有效，如“1000金币” |
+| max_quantity | INT UNSIGNED | 最大购买数量，仅当 `price_type='unit'` 时有效 |
+| sort | INT | 排序值，数字越小越靠前 |
+| status | TINYINT | 1-启用，0-禁用 |
+| created_at | DATETIME | 创建时间 |
+| updated_at | DATETIME | 更新时间 |
+
+**索引**：
+- `idx_game_id`：快速查询某个游戏下的所有项目。
+- `idx_status`：筛选启用的项目。
+
+**外键约束**：`game_id` 外键关联 `games.id`，使用 `ON DELETE RESTRICT ON UPDATE CASCADE`，防止误删游戏导致项目孤悬。
+
+---
+
+## 4. 订单核心设计
+
+### 4.1 设计思路
+订单表是系统的核心，记录了交易双方、交易内容、金额、状态、服务过程及评价。设计时重点考虑：
+- **状态机驱动**：`status` 字段严格控制订单生命周期。
+- **价格防篡改**：`unit_price` 和 `total_amount` 由后端根据项目和数量计算得出，不与前端提交的价格直接挂钩。
+- **账号信息安全**：`account_info` 存储 AES-256-CBC 加密后的文本，保证敏感数据在数据库中不可见。
+- **关联灵活性**：通过 `project_id` 和 `custom_xxx` 字段支持标准项目和自定义项目共存。
+
+### 4.2 表结构详解
+
+#### `orders` - 订单表
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT UNSIGNED | 主键 |
+| order_no | VARCHAR(32) | 唯一订单号，业务主键 |
+| user_id | INT UNSIGNED | 外键，关联 `users.id`，下单用户 |
+| game_id | INT UNSIGNED | 外键，关联 `games.id` |
+| project_id | INT UNSIGNED | 外键，关联 `projects.id`，可为空（自定义项目时为空） |
+| custom_name | VARCHAR(100) | 自定义项目名称，仅当 `project_id` 为空时有效 |
+| custom_description | TEXT | 自定义项目描述 |
+| custom_price | DECIMAL(10,2) | 自定义项目单价，仅当 `project_id` 为空时有效 |
+| quantity | INT UNSIGNED | 数量，默认 1 |
+| unit_price | DECIMAL(10,2) | 单价（由后端计算） |
+| total_amount | DECIMAL(10,2) | 总价（由后端计算） |
+| status | ENUM('pending','accepted','in_progress','review','completed','cancelled','disputed') | 订单状态 |
+| handler_id | INT UNSIGNED | 外键，关联 `handlers.id`，接单打手，可为空 |
+| accepted_at | DATETIME | 接单时间 |
+| account_info | TEXT | 加密后的账号信息 |
+| requirements | TEXT | 用户补充要求 |
+| attachments | JSON | 附件 URL 列表，如截图 |
+| completion_proof | JSON | 打手提交的完成凭证，如图片列表 |
+| created_at | DATETIME | 创建时间 |
+| updated_at | DATETIME | 更新时间 |
+| completed_at | DATETIME | 完成时间（用户确认完成时） |
+| cancelled_at | DATETIME | 取消时间 |
+| user_rating | TINYINT UNSIGNED | 用户对打手的评分 1~5 |
+| user_comment | TEXT | 用户评价内容 |
+| handler_rating | TINYINT UNSIGNED | 打手对用户的评分 1~5 |
+| handler_comment | TEXT | 打手评价内容 |
+
+**约束**：
+- `CHECK ((project_id IS NOT NULL AND custom_name IS NULL) OR (project_id IS NULL AND custom_name IS NOT NULL))`：确保订单要么是标准项目，要么是自定义项目，不能同时有或都无。
+
+**索引**：
+- 唯一索引：`uk_order_no`
+- 普通索引：
+  - `idx_user_id`：查询用户订单列表
+  - `idx_handler_id`：查询打手订单列表
+  - `idx_game_id`：按游戏筛选订单
+  - `idx_status`：按状态筛选
+  - `idx_status_game`：联合索引，用于订单池筛选（`status='pending'` 且按游戏筛选）
+  - `idx_created_at`：按创建时间排序
+
+**外键**：
+- `user_id` -> `users.id`，`ON DELETE RESTRICT`：防止用户被删除后订单无主。
+- `handler_id` -> `handlers.id`，`ON DELETE SET NULL`：打手被删除时，订单关联置空。
+- `game_id` -> `games.id`，`ON DELETE RESTRICT`。
+- `project_id` -> `projects.id`，`ON DELETE SET NULL`：项目被删除时，订单中保留该项目ID为空，但自定义信息仍可查看。
+
+#### `order_logs` - 订单操作日志表
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT UNSIGNED | 主键 |
+| order_id | INT UNSIGNED | 外键，关联 `orders.id`，级联删除 |
+| operator_type | ENUM('user','handler','admin') | 操作者类型 |
+| operator_id | INT UNSIGNED | 操作者 ID（根据类型关联对应表） |
+| action | VARCHAR(50) | 操作类型，如 `create`、`accept`、`start` 等 |
+| old_status | VARCHAR(20) | 变更前的状态 |
+| new_status | VARCHAR(20) | 变更后的状态 |
+| remark | TEXT | 备注信息 |
+| created_at | DATETIME | 操作时间 |
+
+**索引**：
+- `idx_order_id`：按订单查询历史
+- `idx_operator`：`(operator_type, operator_id)`，查询某个角色的所有操作记录
+
+**设计亮点**：
+- 多态关联：`operator_type + operator_id` 的组合可以唯一确定操作者，无需为三种角色分别建立外键，避免了复杂的多外键设计。
+- 记录状态变更前后，便于问题追踪和审计。
+
+---
+
+## 5. 消息系统设计
+
+### 5.1 设计思路
+- 支持用户、打手、管理员三者之间任意两人进行**一对一**私聊。
+- 消息可关联订单（`order_id`），在聊天中方便地查看订单详情。
+- 记录每个会话中每个参与者的已读位置，实现未读消息计数。
+
+### 5.2 表结构详解
+
+#### `conversations` - 会话表
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT UNSIGNED | 主键 |
+| type | ENUM('user_user','user_handler','handler_admin','user_admin') | 会话类型，决定参与者角色 |
+| participant_a_type | ENUM('user','handler','admin') | 参与者A的类型 |
+| participant_a_id | INT UNSIGNED | 参与者A的ID |
+| participant_b_type | ENUM('user','handler','admin') | 参与者B的类型 |
+| participant_b_id | INT UNSIGNED | 参与者B的ID |
+| last_message | TEXT | 最后一条消息内容（预览用） |
+| last_message_at | DATETIME | 最后消息时间 |
+| created_at | DATETIME | 创建时间 |
+| updated_at | DATETIME | 更新时间 |
+
+**索引**：
+- 唯一索引：`uk_participants`，确保两个参与者之间只存在一个会话，避免重复。
+- 复合索引：`idx_participant_a`、`idx_participant_b`，用于快速查找用户参与的会话列表。
+- `idx_last_message_at`：按最后消息时间排序会话列表。
+
+**设计说明**：
+- 虽然 `type` 可以由两个参与者的类型推导得出，但冗余该字段可提升查询效率。
+- 使用 `participant_a` 和 `participant_b` 的区分不强调顺序，但唯一索引确保了无论 `(A,B)` 还是 `(B,A)` 都视为同一个会话（应用层需规范插入顺序）。
+
+#### `messages` - 消息表
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT UNSIGNED | 主键 |
+| conversation_id | INT UNSIGNED | 外键，关联 `conversations.id`，级联删除 |
+| sender_type | ENUM('user','handler','admin') | 发送者类型 |
+| sender_id | INT UNSIGNED | 发送者ID |
+| content | TEXT | 消息内容（纯文本或结构化 JSON） |
+| content_type | ENUM('text','image','file','order_card') | 消息类型 |
+| attachment | VARCHAR(255) | 附件 URL（当 `content_type` 为 `image` 或 `file` 时） |
+| order_id | INT UNSIGNED | 关联订单ID，可为空，用于订单卡片 |
+| status | ENUM('sent','delivered','read') | 消息状态，默认 `sent` |
+| created_at | DATETIME | 发送时间 |
+
+**索引**：
+- `idx_conversation_id`：按会话查询消息列表
+- `idx_sender`：查询某个用户发送的所有消息
+- `idx_created_at`：用于分页和排序
+
+**设计说明**：
+- `sender_type + sender_id` 多态标识发送者，无需外键约束（应用层保证一致性）。
+- `order_id` 外键关联 `orders.id`，当订单被删除时，消息中的 `order_id` 设为 `NULL`，保留历史记录。
+
+#### `message_read_status` - 消息已读状态表
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | INT UNSIGNED | 主键 |
+| conversation_id | INT UNSIGNED | 外键，关联 `conversations.id`，级联删除 |
+| participant_type | ENUM('user','handler','admin') | 参与者类型 |
+| participant_id | INT UNSIGNED | 参与者ID |
+| last_read_message_id | INT UNSIGNED | 最后已读的消息ID，可为空 |
+| updated_at | DATETIME | 更新时间 |
+
+**索引**：
+- 唯一索引：`uk_conversation_participant`，确保每个会话中每个参与者只有一条记录。
+- 外键：`last_read_message_id` 关联 `messages.id`，删除消息时置空。
+
+**用途**：
+- 计算未读消息数：`SELECT COUNT(*) FROM messages WHERE conversation_id = ? AND id > last_read_message_id`。
+- 支持“标记为已读”操作，只需更新 `last_read_message_id`。
+
+---
+
+## 6. 索引与性能优化
+
+### 6.1 核心查询场景
+- **订单池查询**：`SELECT * FROM orders WHERE status='pending' AND game_id = ? ORDER BY created_at LIMIT ?,?`  
+  使用联合索引 `idx_status_game` 覆盖筛选条件。
+- **我的订单列表**：按用户或打手查询，使用 `idx_user_id` 或 `idx_handler_id`，并根据状态过滤可再增加联合索引。
+- **会话列表**：查询用户参与的所有会话，使用 `idx_participant_a` 和 `idx_participant_b`，并按 `last_message_at` 排序。
+- **消息历史**：按会话分页加载，`idx_conversation_id` + `idx_created_at` 可满足。
+
+### 6.2 索引策略建议
+- 对 `orders` 表，除了已有的索引，可考虑为 `(user_id, status)` 和 `(handler_id, status)` 建立联合索引，优化个人订单列表按状态筛选。
+- 对 `messages` 表，`(conversation_id, created_at)` 联合索引可提高分页查询效率。
+- 对 `order_logs` 表，`(order_id, created_at)` 联合索引便于按时间顺序查看订单日志。
+
+### 6.3 其他优化
+- 使用 `JSON` 类型存储附件和完成凭证列表，避免使用关联表，减少 JOIN。
+- 定期归档历史订单（如完成超过一年）到冷存储，保持主表规模可控。
+- 对于订单池的查询，可增加 Redis 缓存热点数据，减少数据库压力。
+
+---
+
+## 7. 安全性设计
+
+### 7.1 数据加密
+- **密码**：使用 bcrypt 哈希，不可逆。
+- **账号信息**：`account_info` 在应用层使用 AES-256-CBC 加密，密钥从环境变量获取，数据库仅存储密文。
+
+### 7.2 数据脱敏
+- 未接单的订单，`account_info` 在 API 返回时不提供；接单后，仅打手可见。
+- 消息表中，敏感信息（如密码）不应出现在消息内容中，若需传递，应通过订单的 `account_info` 加密传输。
+
+### 7.3 审计日志
+- `order_logs` 记录所有订单状态变更，操作人类型和ID，便于追溯争议问题。
+- 管理员操作（如强制取消、介入争议）也应记录到独立的 `admin_operation_logs` 表（可根据需要扩展）。
+
+### 7.4 外键约束的权衡
+- 使用外键保证数据一致性，但需注意高并发下可能产生锁竞争。对于核心表如 `orders`，`user_id`、`game_id` 等外键建议保留；对于非核心的 `order_logs` 的外键，可使用应用层逻辑保证一致性，以减少数据库开销。
+
+---
+
+## 8. 扩展性考量
+
+### 8.1 用户体系
+当前三表独立，若未来需要统一用户身份（如同一账号可以既是用户又是打手），可引入 `accounts` 统一认证表，再将角色扩展为多表关联。但现阶段独立设计更简单。
+
+### 8.2 订单扩展
+- 若增加支付功能，可在 `orders` 表中增加 `payment_status`、`payment_method`、`paid_at` 等字段。
+- 若支持多打手协同，可引入 `order_handlers` 关联表，将 `handler_id` 改为多对多关系。
+
+### 8.3 消息系统
+- 若未来需要群聊，可在 `conversations` 表中增加 `is_group` 字段，并新建 `conversation_members` 表。
+- 消息类型可随时扩展 `content_type` 枚举值。
+
+### 8.4 项目价格调整
+`projects` 表支持 `price_type` 扩展，例如增加 `package`（套餐）等新计价方式，仅需修改枚举和应用层逻辑，不影响表结构。
+
+---
+
+## 9. 总结
+
+本数据库设计充分考虑了业务复杂性、性能需求和未来扩展性。通过合理拆分用户表、状态机驱动订单、多态关联日志以及灵活的消息系统，为游戏代练平台提供了稳固的数据基础。后续开发中，应严格遵循索引优化建议，并配合应用层的加密、脱敏和审计策略，确保系统安全、高效运行。
+# 游戏代练交易平台 API 设计文档
+
+## 1. 基础约定
+
+### 1.1 统一响应格式
+所有接口返回 JSON 格式，结构如下：
+```json
+{
+  "code": 0,          // 0 表示成功，非 0 表示错误码
+  "data": {},         // 成功时返回的数据
+  "message": ""       // 错误信息或提示信息
+}
+```
+
+### 1.2 认证方式
+所有需要权限的接口（除登录、注册外）均需在请求头中携带 JWT：
+```
+Authorization: Bearer <JWT>
+```
+
+### 1.3 角色权限
+| 角色   | 标识    | 说明                     |
+|--------|---------|--------------------------|
+| 用户   | user    | 下单、取消、确认、评价     |
+| 打手   | handler | 接单、开始服务、提交完成凭证 |
+| 管理员 | admin   | 管理项目、介入争议、强制操作 |
+
+### 1.4 错误码约定
+| 错误码 | 说明                 |
+|--------|----------------------|
+| 0      | 成功                 |
+| 400    | 请求参数错误         |
+| 401    | 未认证或 token 失效  |
+| 403    | 权限不足             |
+| 404    | 资源不存在           |
+| 409    | 冲突（如订单已被抢） |
+| 500    | 服务器内部错误       |
+
+---
+
+## 2. 认证与用户管理
+
+### 2.1 用户注册
+**接口**：`POST /api/auth/register`
+
+**权限**：公开
+
+**请求体**：
+```json
+{
+  "username": "player001",
+  "email": "player@example.com",
+  "password": "password123",
+  "phone": "13800138000",
+  "role": "user"      // user 或 handler，管理员需后台创建
+}
+```
+
+**响应**：
+```json
+{
+  "code": 0,
+  "data": {
+    "id": 1,
+    "username": "player001",
+    "email": "player@example.com",
+    "role": "user"
+  },
+  "message": "注册成功"
+}
+```
+
+**业务逻辑**：
+- 校验用户名、邮箱是否已存在
+- 密码使用 bcrypt 哈希后存储
+- 根据 `role` 插入对应的表（`users` 或 `handlers`）
+
+### 2.2 用户登录
+**接口**：`POST /api/auth/login`
+
+**权限**：公开
+
+**请求体**：
+```json
+{
+  "username": "player001",
+  "password": "password123"
+}
+```
+
+**响应**：
+```json
+{
+  "code": 0,
+  "data": {
+    "access_token": "eyJhbGciOiJIUzI1NiIs...",
+    "token_type": "bearer",
+    "user": {
+      "id": 1,
+      "username": "player001",
+      "role": "user"
+    }
+  },
+  "message": "登录成功"
+}
+```
+
+**业务逻辑**：
+- 根据用户名查找对应角色（需先查 `users`，若无则查 `handlers`，若无则查 `admins`）
+- 验证密码
+- 生成 JWT，payload 中包含 `sub`（用户ID）、`role`、`exp` 等
+
+### 2.3 获取当前用户信息
+**接口**：`GET /api/auth/me`
+
+**权限**：user / handler / admin
+
+**响应**：
+```json
+{
+  "code": 0,
+  "data": {
+    "id": 1,
+    "username": "player001",
+    "email": "player@example.com",
+    "phone": "13800138000",
+    "avatar": "https://...",
+    "role": "user",
+    "balance": 100.00,      // 仅用户返回
+    "level": 2,             // 仅打手返回
+    "total_orders": 10      // 仅打手返回
+  },
+  "message": ""
+}
+```
+
+---
+
+## 3. 游戏与项目管理
+
+### 3.1 获取游戏列表
+**接口**：`GET /api/games`
+
+**权限**：公开（登录即可）
+
+**请求参数**（可选）：
+- `status`：1（启用）或 0（禁用），默认 1
+
+**响应**：
+```json
+{
+  "code": 0,
+  "data": [
+    {
+      "id": 1,
+      "name": "王者荣耀",
+      "icon": "https://...",
+      "status": 1
+    }
+  ]
+}
+```
+
+### 3.2 获取游戏下的标准项目（用户下单时使用）
+**接口**：`GET /api/games/{gameId}/projects`
+
+**权限**：user / handler
+
+**响应**：
+```json
+{
+  "code": 0,
+  "data": [
+    {
+      "id": 10,
+      "name": "代刷金币",
+      "description": "代刷游戏金币，安全高效",
+      "price_type": "unit",
+      "price": 10.00,
+      "unit_name": "1000金币",
+      "max_quantity": 50,
+      "sort": 1
+    }
+  ]
+}
+```
+
+### 3.3 管理员 - 标准项目管理
+
+#### 3.3.1 创建项目
+**接口**：`POST /api/admin/projects`
+
+**权限**：admin
+
+**请求体**：
+```json
+{
+  "game_id": 1,
+  "name": "代刷金币",
+  "description": "代刷游戏金币，安全高效",
+  "price_type": "unit",
+  "price": 10.00,
+  "unit_name": "1000金币",
+  "max_quantity": 50,
+  "sort": 1,
+  "status": 1
+}
+```
+
+**响应**：返回创建的项目对象
+
+#### 3.3.2 更新项目
+**接口**：`PUT /api/admin/projects/{projectId}`
+
+**权限**：admin
+
+**请求体**：同创建，支持部分字段
+
+**响应**：返回更新后的项目对象
+
+#### 3.3.3 删除项目
+**接口**：`DELETE /api/admin/projects/{projectId}`
+
+**权限**：admin
+
+**响应**：
+```json
+{
+  "code": 0,
+  "data": null,
+  "message": "删除成功"
+}
+```
+
+#### 3.3.4 获取项目列表（管理员）
+**接口**：`GET /api/admin/projects`
+
+**权限**：admin
+
+**请求参数**：
+- `game_id`：可选，按游戏筛选
+- `page`、`size`：分页
+
+**响应**：分页列表
+
+---
+
+## 4. 订单管理
+
+### 4.1 创建订单（用户）
+**接口**：`POST /api/orders`
+
+**权限**：user
+
+**请求体**：
+```json
+{
+  "gameId": 1,
+  "type": "standard",          // standard / custom
+  "projectId": 5,              // type=standard时必填
+  "quantity": 3,               // standard且unit计价时必填
+  "customName": "",            // type=custom时必填
+  "customDescription": "",
+  "customPrice": 100.00,
+  "accountInfo": "{\"username\":\"xxx\",\"password\":\"xxx\"}",
+  "requirements": "尽快完成",
+  "attachments": ["https://..."]
+}
+```
+
+**响应**：返回订单对象（不含账号信息，因为尚未解密）
+
+**业务逻辑**：
+- 校验游戏存在且启用
+- 若为标准项目，从 `projects` 表获取价格，根据 `price_type` 计算总价（fixed固定为1数量，unit为price*quantity且不超过max_quantity）
+- 若为自定义项目，单价为 `customPrice`，数量固定1，总价= `customPrice`
+- 生成唯一订单号（格式：`BO` + 时间戳毫秒 + 4位随机数）
+- 将 `accountInfo` 使用 AES-256-CBC 加密后存入 `account_info` 字段
+- 订单状态设为 `pending`
+- 记录操作日志
+
+### 4.2 获取订单池列表（打手/管理员）
+**接口**：`GET /api/orders/pool`
+
+**权限**：handler, admin
+
+**请求参数**：
+- `gameId`：可选，按游戏筛选
+- `page`：页码，默认1
+- `size`：每页数量，默认20，最大100
+
+**响应**：
+```json
+{
+  "code": 0,
+  "data": {
+    "items": [
+      {
+        "id": 100,
+        "orderNo": "BO17091234567891234",
+        "gameName": "王者荣耀",
+        "projectName": "代刷金币",      // 自定义项目显示“自定义：xxx”
+        "totalAmount": 30.00,
+        "requirements": "尽快完成",
+        "createdAt": "2025-01-01T10:00:00Z"
+      }
+    ],
+    "total": 100,
+    "page": 1,
+    "size": 20
+  }
+}
+```
+
+**逻辑**：
+- 仅返回 `status='pending'` 的订单
+- 不返回 `accountInfo` 字段
+- 若 `project_id` 为空，则 `projectName` 显示 `"自定义：{custom_name}"`
+
+### 4.3 接单（打手）
+**接口**：`POST /api/orders/{orderId}/accept`
+
+**权限**：handler
+
+**响应**：返回更新后的订单对象
+
+**业务逻辑**：
+- 校验订单状态为 `pending`
+- 使用乐观锁更新：`UPDATE orders SET status='accepted', handler_id=?, accepted_at=NOW() WHERE id=? AND status='pending'`
+- 若影响行数为0，返回409冲突，提示已被抢单
+- 记录日志
+- （可选）通过消息系统通知用户订单已被接单
+
+### 4.4 获取我的订单列表
+**接口**：`GET /api/orders/my`
+
+**权限**：user / handler
+
+**请求参数**：
+- `status`：可选，按状态筛选（如 `pending`、`accepted` 等）
+- `page`、`size`：分页
+
+**响应**：分页列表，字段同订单池列表，但 user 视角不显示 `handler_id`，handler 视角不显示 `user_id`
+
+### 4.5 订单详情
+**接口**：`GET /api/orders/{orderId}`
+
+**权限**：订单参与者（user/handler）或 admin
+
+**响应**：完整订单信息，根据角色脱敏
+```json
+{
+  "code": 0,
+  "data": {
+    "id": 100,
+    "orderNo": "BO17091234567891234",
+    "game": { "id": 1, "name": "王者荣耀" },
+    "project": { "id": 5, "name": "代刷金币", "priceType": "unit" },
+    "customName": null,
+    "customDescription": null,
+    "quantity": 3,
+    "unitPrice": 10.00,
+    "totalAmount": 30.00,
+    "status": "accepted",
+    "handler": { "id": 2, "username": "handler01" },   // 仅当已接单且角色为user或admin时返回部分信息
+    "accountInfo": "{\"username\":\"xxx\",\"password\":\"xxx\"}", // 仅打手可见，且解密后
+    "requirements": "尽快完成",
+    "attachments": ["https://..."],
+    "completionProof": null,
+    "createdAt": "2025-01-01T10:00:00Z",
+    "acceptedAt": "2025-01-01T10:05:00Z",
+    "completedAt": null,
+    "cancelledAt": null,
+    "userRating": null,
+    "handlerRating": null,
+    "conversationId": 123   // 附带与打手/用户的会话ID，便于跳转
+  }
+}
+```
+
+**逻辑**：
+- 账号信息解密后返回（仅当请求者是接单打手或管理员）
+- 附带消息会话ID，若尚未有会话，则返回 `null`，前端可调用创建会话接口（消息系统处理）
+
+### 4.6 更新订单状态
+**接口**：`POST /api/orders/{orderId}/status`
+
+**权限**：订单参与者或 admin
+
+**请求体**：
+```json
+{
+  "action": "start",        // start / submit_complete / confirm_complete / cancel / dispute
+  "remark": "可选备注"
+}
+```
+
+**action 说明**：
+| action | 当前状态要求 | 新状态 | 说明 |
+|--------|--------------|--------|------|
+| start | accepted | in_progress | 打手开始服务 |
+| submit_complete | in_progress | review | 打手提交完成凭证，需上传 completion_proof |
+| confirm_complete | review | completed | 用户确认完成 |
+| cancel | pending / accepted / in_progress | cancelled | 用户或管理员取消，若已接单需双方同意（建议走争议） |
+| dispute | 任意非终态 | disputed | 任意一方发起争议 |
+
+**请求体示例**（提交完成凭证）：
+```json
+{
+  "action": "submit_complete",
+  "completion_proof": ["https://..."],
+  "remark": "已完成"
+}
+```
+
+**响应**：返回更新后的订单对象
+
+**业务逻辑**：
+- 校验当前状态是否允许该 action
+- 更新订单状态，并记录相关字段（如 `completion_proof`）
+- 记录日志
+- 发送消息通知对方
+
+### 4.7 评价订单
+**接口**：`POST /api/orders/{orderId}/rate`
+
+**权限**：订单参与者
+
+**请求体**：
+```json
+{
+  "role": "user",    // user 或 handler
+  "rating": 5,
+  "comment": "服务很好"
+}
+```
+
+**响应**：
+```json
+{
+  "code": 0,
+  "data": null,
+  "message": "评价成功"
+}
+```
+
+**业务逻辑**：
+- 订单状态必须为 `completed`
+- 根据 `role` 更新 `user_rating`/`user_comment` 或 `handler_rating`/`handler_comment`
+- 每个角色只能评价一次，不可修改
+
+---
+
+## 5. 消息系统
+
+### 5.1 获取会话列表
+**接口**：`GET /api/conversations`
+
+**权限**：user / handler / admin
+
+**请求参数**：
+- `page`、`size`：分页
+
+**响应**：
+```json
+{
+  "code": 0,
+  "data": {
+    "items": [
+      {
+        "id": 123,
+        "type": "user_handler",
+        "other_party": {
+          "id": 2,
+          "username": "handler01",
+          "avatar": "https://...",
+          "role": "handler"
+        },
+        "last_message": "订单已完成，谢谢！",
+        "last_message_at": "2025-01-01T12:00:00Z",
+        "unread_count": 2
+      }
+    ],
+    "total": 5
+  }
+}
+```
+
+**逻辑**：
+- 根据当前用户类型和ID，查询所有包含该用户的会话
+- `other_party` 为会话中的另一方
+- `unread_count` 通过 `message_read_status` 计算
+
+### 5.2 获取会话消息列表
+**接口**：`GET /api/conversations/{conversationId}/messages`
+
+**权限**：会话参与者
+
+**请求参数**：
+- `before`：可选，消息ID，用于加载更早的消息
+- `limit`：每页数量，默认20
+
+**响应**：
+```json
+{
+  "code": 0,
+  "data": {
+    "items": [
+      {
+        "id": 1001,
+        "sender": {
+          "id": 1,
+          "username": "player001",
+          "role": "user"
+        },
+        "content": "什么时候能开始？",
+        "content_type": "text",
+        "attachment": null,
+        "order_id": 100,
+        "status": "read",
+        "created_at": "2025-01-01T11:00:00Z"
+      }
+    ],
+    "has_more": true
+  }
+}
+```
+
+### 5.3 发送消息
+**接口**：`POST /api/conversations/{conversationId}/messages`
+
+**权限**：会话参与者
+
+**请求体**：
+```json
+{
+  "content": "已经开始了，稍等",
+  "content_type": "text",
+  "attachment": null,
+  "order_id": 100   // 可选，关联订单
+}
+```
+
+**响应**：返回创建的消息对象
+
+**业务逻辑**：
+- 校验用户是否属于该会话
+- 若 `order_id` 不为空，校验订单存在且用户有权限查看
+- 存储消息
+- 更新会话的 `last_message` 和 `last_message_at`
+- （可选）通过 WebSocket 推送消息
+
+### 5.4 标记会话已读
+**接口**：`POST /api/conversations/{conversationId}/read`
+
+**权限**：会话参与者
+
+**请求体**：
+```json
+{
+  "last_read_message_id": 1005
+}
+```
+
+**响应**：
+```json
+{
+  "code": 0,
+  "data": null,
+  "message": "已更新已读位置"
+}
+```
+
+**业务逻辑**：
+- 更新 `message_read_status` 表中该参与者的 `last_read_message_id`
+
+### 5.5 创建会话（可选）
+**接口**：`POST /api/conversations`
+
+**权限**：user / handler / admin
+
+**请求体**：
+```json
+{
+  "target_user_id": 2,
+  "target_role": "handler",
+  "order_id": 100  // 可选，用于关联订单
+}
+```
+
+**响应**：返回创建的会话对象
+
+**业务逻辑**：
+- 查找或创建与目标角色的会话
+- 若提供了 `order_id`，可在会话中自动关联订单卡片（前端处理）
+
+---
+
+## 6. 管理员扩展接口
+
+### 6.1 强制取消订单
+**接口**：`POST /api/admin/orders/{orderId}/force-cancel`
+
+**权限**：admin
+
+**请求体**：
+```json
+{
+  "remark": "违规操作，强制取消"
+}
+```
+
+**响应**：返回更新后的订单对象
+
+**业务逻辑**：
+- 无论订单处于何种状态，直接改为 `cancelled`
+- 记录日志，备注管理员操作
+
+### 6.2 仲裁争议订单
+**接口**：`POST /api/admin/orders/{orderId}/arbitrate`
+
+**权限**：admin
+
+**请求体**：
+```json
+{
+  "resolution": "complete",  // complete / cancel
+  "remark": "打手已完成，确认完成"
+}
+```
+
+**响应**：返回更新后的订单对象
+
+**业务逻辑**：
+- 订单状态必须为 `disputed`
+- 根据 `resolution` 将状态改为 `completed` 或 `cancelled`
+- 记录日志
+
+### 6.3 获取所有订单（管理员）
+**接口**：`GET /api/admin/orders`
+
+**权限**：admin
+
+**请求参数**：
+- `user_id`、`handler_id`、`game_id`、`status`：筛选条件
+- `page`、`size`
+
+**响应**：分页订单列表（可包含账号信息解密后）
+
+---
+
+## 7. 公共接口
+
+### 7.1 文件上传
+**接口**：`POST /api/upload`
+
+**权限**：user / handler / admin
+
+**请求**：`multipart/form-data`，字段 `file`
+
+**响应**：
+```json
+{
+  "code": 0,
+  "data": {
+    "url": "https://cdn.example.com/uploads/xxx.jpg"
+  },
+  "message": ""
+}
+```
+
+**业务逻辑**：
+- 校验文件类型、大小
+- 上传至云存储（如 OSS），返回公网 URL
+
+---
+
+## 8. 错误码示例
+
+| 错误码 | 场景                     | 示例消息                     |
+|--------|--------------------------|------------------------------|
+| 400    | 参数校验失败             | "quantity 不能超过最大数量 50" |
+| 401    | JWT 缺失或无效           | "未提供认证令牌"              |
+| 403    | 角色无权限               | "只有打手可以接单"            |
+| 404    | 订单不存在               | "订单不存在"                  |
+| 409    | 接单冲突                 | "订单已被其他打手抢单"        |
+| 422    | 业务逻辑错误             | "订单状态不允许取消"          |
+
+---
+
+## 9. 接口安全注意事项
+
+- 所有接口需验证 JWT 有效性，并校验角色。
+- 订单操作需校验用户是否为订单参与者或管理员。
+- 敏感信息（如 `accountInfo`）仅在特定角色可见，且传输时使用 HTTPS。
+- 上传文件需做内容安全检测，防止恶意文件。
+- 防止接口被恶意刷单：可在接单、创建订单等接口添加限流（如 Redis + 滑动窗口）。
+
+---
+
+## 10. 变更记录
+
+| 版本 | 日期       | 修改人 | 修改说明 |
+|------|------------|--------|----------|
+| 1.0  | 2025-01-01 | AI     | 初始版本 |

@@ -1,0 +1,327 @@
+.order-detail-container {
+  min-height: 100vh;
+  background: var(--gray-50);
+  padding: 24px;
+}
+
+.order-detail-content {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.order-detail-header {
+  background: var(--primary);
+  color: white;
+  padding: 24px 32px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-left h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+
+.order-detail-header .back-btn {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 7px 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.order-detail-header .back-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.order-detail-header .status-badge {
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  letter-spacing: 0.3px;
+}
+
+.status-pending { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+.status-pending-review { background: #e3f2fd; color: #1565c0; border-color: #90caf9; }
+.status-accepted { background: #dbeafe; color: #1e40af; border-color: #93c5fd; }
+.status-in-progress { background: #cffafe; color: #155e75; border-color: #a5f3fc; }
+.status-review { background: #f3e8ff; color: #6b21a8; border-color: #d8b4fe; }
+.status-completed { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
+.status-cancelled { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.status-disputed { background: #ffedd5; color: #9a3412; border-color: #fdba74; }
+
+.detail-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.detail-section {
+  background: white;
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--gray-100);
+}
+
+.detail-section:last-of-type {
+  border-bottom: none;
+}
+
+.section-title {
+  margin: 0 0 16px 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--gray-800);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--gray-100);
+  letter-spacing: 0.3px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 32px;
+}
+
+.info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.info-item,
+.info-item-full {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-label {
+  font-size: 12px;
+  color: var(--gray-400);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: 14px;
+  color: var(--gray-800);
+  word-break: break-word;
+  line-height: 1.6;
+}
+
+.info-value.order-no {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  color: var(--gray-600);
+}
+
+.info-value.price {
+  color: var(--danger);
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.info-value.account-info {
+  background: var(--gray-50);
+  padding: 14px 18px;
+  border-radius: var(--radius);
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  border: 1px solid var(--gray-200);
+}
+
+/* 项目明细表格 */
+.items-table {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.items-header {
+  display: grid;
+  grid-template-columns: 2fr 100px 100px 100px;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--gray-100);
+  border-bottom: 1px solid var(--gray-200);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+.item-row {
+  display: grid;
+  grid-template-columns: 2fr 100px 100px 100px;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--gray-200);
+  align-items: center;
+}
+
+.item-row:last-child {
+  border-bottom: none;
+}
+
+.item-name {
+  font-size: 14px;
+  color: var(--gray-800);
+  font-weight: 500;
+}
+
+.item-qty {
+  font-size: 14px;
+  color: var(--gray-700);
+  text-align: center;
+}
+
+.item-price {
+  font-size: 14px;
+  color: var(--gray-600);
+  text-align: right;
+}
+
+.item-total {
+  font-size: 14px;
+  color: var(--danger);
+  font-weight: 700;
+  text-align: right;
+}
+
+.detail-actions {
+  background: white;
+  padding: 20px 32px;
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid var(--gray-100);
+}
+
+.detail-actions .cancel-btn {
+  padding: 10px 24px;
+  background: white;
+  color: var(--danger);
+  border: 1.5px solid #fecaca;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.detail-actions .cancel-btn:hover {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+}
+
+.loading-state,
+.error-state {
+  text-align: center;
+  padding: 80px 20px;
+  color: var(--gray-400);
+  background: white;
+  border-radius: var(--radius-lg);
+}
+
+.error-state .back-btn {
+  margin-top: 16px;
+  padding: 10px 24px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: var(--transition);
+}
+
+.error-state .back-btn:hover {
+  background: var(--primary-dark);
+}
+
+@media (max-width: 768px) {
+  .order-detail-content {
+    margin: 0;
+  }
+
+  .order-detail-header {
+    border-radius: 0;
+    padding: 20px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .detail-section {
+    padding: 20px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .items-header {
+    display: none;
+  }
+
+  .item-row {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 16px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    background: white;
+  }
+
+  .item-row:last-child {
+    border-bottom: 1px solid var(--gray-200);
+    margin-bottom: 0;
+  }
+
+  .item-name::before,
+  .item-qty::before,
+  .item-price::before,
+  .item-total::before {
+    content: attr(data-label);
+    font-size: 12px;
+    color: var(--gray-500);
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: block;
+  }
+
+  .item-qty,
+  .item-price,
+  .item-total {
+    text-align: left;
+  }
+
+  .detail-actions {
+    border-radius: 0;
+  }
+}
