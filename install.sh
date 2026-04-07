@@ -86,8 +86,13 @@ EOF
 
 echo "[5/10] 安装Python依赖..."
 cd $APP_DIR
-python3 -m pip install --upgrade pip
-python3 -m pip install -r requirements.txt
+# 创建并激活虚拟环境
+python3 -m venv venv
+source venv/bin/activate
+# 升级pip
+pip install --upgrade pip
+# 安装依赖
+pip install -r requirements.txt
 
 echo "[6/10] 安装Node.js..."
 if ! command -v node &> /dev/null; then
@@ -175,7 +180,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=$APP_DIR
-ExecStart=/usr/bin/python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8888
+ExecStart=$APP_DIR/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8888
 Restart=always
 RestartSec=10
 Environment=PYTHONUNBUFFERED=1
