@@ -40,7 +40,7 @@ SMTP_PASS="GEwMY39pLSDTDEvp"
 
 echo "[1/10] 安装系统依赖..."
 apt update
-apt install -y python3 python3-pip python3-venv nginx git curl
+apt install -y python3 python3-pip python3-venv nginx git curl lsof psmisc
 
 echo "[2/10] 创建目录..."
 mkdir -p $APP_DIR
@@ -102,6 +102,14 @@ npm run build
 cd $APP_DIR
 
 echo "[8/10] 配置Nginx..."
+# 检查端口80是否被占用
+if lsof -i :80 > /dev/null 2>&1; then
+    echo "端口80被占用，正在停止占用进程..."
+    # 停止占用端口80的进程
+    fuser -k 80/tcp 2>/dev/null || true
+    sleep 3
+fi
+
 cat > /etc/nginx/sites-available/fashiye << 'NGINX_CONF'
 upstream fashiye_backend {
     server 127.0.0.1:8888;
@@ -152,8 +160,15 @@ NGINX_CONF
 
 ln -sf /etc/nginx/sites-available/fashiye /etc/nginx/sites-enabled/fashiye
 rm -f /etc/nginx/sites-enabled/default
-nginx -t
-systemctl reload nginx
+# 强制停止并重启nginx
+systemctl stop nginx 2>/dev/null || true
+sleep 2
+nginx -t && systemctl start nginx
+if [ $? -ne 0 ]; then
+    echo "Nginx启动失败，尝试手动启动..."
+    /usr/sbin/nginx -c /etc/nginx/nginx.conf
+fi
+systemctl reload nginx 2>/dev/null || true
 
 echo "[9/10] 安装Systemd服务..."
 cat > /etc/systemd/system/fashiye.service << EOF
