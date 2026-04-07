@@ -85,14 +85,26 @@ SMTP_FROM=$SMTP_USER
 EOF
 
 echo "[5/10] 安装Python依赖..."
-cd $APP_DIR
-# 创建并激活虚拟环境
-python3 -m venv venv
-source venv/bin/activate
-# 升级pip
-pip install --upgrade pip
-# 安装依赖
-pip install -r requirements.txt
+echo "当前目录: $(pwd)"
+echo "APP_DIR: $APP_DIR"
+# 确保目录存在
+mkdir -p "$APP_DIR"
+# 进入目录
+cd "$APP_DIR" || { echo "无法进入目录 $APP_DIR"; exit 1; }
+echo "进入目录后: $(pwd)"
+# 创建虚拟环境
+echo "创建虚拟环境..."
+python3 -m venv "$APP_DIR/venv"
+if [ ! -d "$APP_DIR/venv" ]; then
+    echo "虚拟环境创建失败"
+    exit 1
+fi
+echo "虚拟环境创建成功: $APP_DIR/venv"
+# 直接使用虚拟环境的pip (使用绝对路径)
+echo "升级pip..."
+"$APP_DIR/venv/bin/pip" install --upgrade pip
+echo "安装依赖..."
+"$APP_DIR/venv/bin/pip" install -r "$APP_DIR/requirements.txt"
 
 echo "[6/10] 安装Node.js..."
 if ! command -v node &> /dev/null; then
