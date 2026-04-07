@@ -87,16 +87,28 @@ EOF
 echo "[5/10] 安装Python依赖..."
 # 直接使用系统pip，添加--break-system-packages标志，并忽略root用户警告
 echo "安装Python依赖..."
-python3 -m pip install --upgrade pip --break-system-packages --root-user-action=ignore
-python3 -m pip install -r "$APP_DIR/requirements.txt" --break-system-packages --root-user-action=ignore
+# 使用PIP_ROOT_USER_ACTION环境变量来避免警告
+export PIP_ROOT_USER_ACTION=ignore
+python3 -m pip install --upgrade pip --break-system-packages
+python3 -m pip install -r "$APP_DIR/requirements.txt" --break-system-packages
 
 echo "[6/10] 安装Node.js..."
-if ! command -v node &> /dev/null || [ "$(node -v | sed 's/v//')" -lt "20" ]; then
-    echo "安装Node.js 20..."
+# 检查Node.js版本
+NODE_VERSION=$(node -v 2>/dev/null || echo "v0.0.0")
+NODE_MAJOR=$(echo "$NODE_VERSION" | sed 's/v//' | cut -d. -f1)
+if [ "$NODE_MAJOR" -lt "20" ]; then
+    echo "当前Node.js版本: $NODE_VERSION，需要升级到v20+..."
+    # 彻底卸载旧版本
+    apt remove -y nodejs npm
+    # 安装Node.js 20
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
     apt install -y nodejs
+    # 验证安装
+    NODE_VERSION=$(node -v)
+    echo "Node.js已升级到: $NODE_VERSION"
 fi
 # 升级npm
+echo "升级npm..."
 npm install -g npm@latest
 
 echo "[7/10] 构建前端..."
