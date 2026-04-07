@@ -85,26 +85,10 @@ SMTP_FROM=$SMTP_USER
 EOF
 
 echo "[5/10] 安装Python依赖..."
-echo "当前目录: $(pwd)"
-echo "APP_DIR: $APP_DIR"
-# 确保目录存在
-mkdir -p "$APP_DIR"
-# 进入目录
-cd "$APP_DIR" || { echo "无法进入目录 $APP_DIR"; exit 1; }
-echo "进入目录后: $(pwd)"
-# 创建虚拟环境
-echo "创建虚拟环境..."
-python3 -m venv "$APP_DIR/venv"
-if [ ! -d "$APP_DIR/venv" ]; then
-    echo "虚拟环境创建失败"
-    exit 1
-fi
-echo "虚拟环境创建成功: $APP_DIR/venv"
-# 直接使用虚拟环境的pip (使用绝对路径)
-echo "升级pip..."
-"$APP_DIR/venv/bin/pip" install --upgrade pip
-echo "安装依赖..."
-"$APP_DIR/venv/bin/pip" install -r "$APP_DIR/requirements.txt"
+# 直接使用系统pip，添加--break-system-packages标志
+echo "安装Python依赖..."
+python3 -m pip install --upgrade pip --break-system-packages
+python3 -m pip install -r "$APP_DIR/requirements.txt" --break-system-packages
 
 echo "[6/10] 安装Node.js..."
 if ! command -v node &> /dev/null; then
@@ -192,7 +176,7 @@ After=network.target
 Type=simple
 User=root
 WorkingDirectory=$APP_DIR
-ExecStart=$APP_DIR/venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8888
+ExecStart=/usr/bin/python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8888
 Restart=always
 RestartSec=10
 Environment=PYTHONUNBUFFERED=1
