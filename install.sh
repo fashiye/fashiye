@@ -85,16 +85,19 @@ SMTP_FROM=$SMTP_USER
 EOF
 
 echo "[5/10] 安装Python依赖..."
-# 直接使用系统pip，添加--break-system-packages标志
+# 直接使用系统pip，添加--break-system-packages标志，并忽略root用户警告
 echo "安装Python依赖..."
-python3 -m pip install --upgrade pip --break-system-packages
-python3 -m pip install -r "$APP_DIR/requirements.txt" --break-system-packages
+python3 -m pip install --upgrade pip --break-system-packages --root-user-action=ignore
+python3 -m pip install -r "$APP_DIR/requirements.txt" --break-system-packages --root-user-action=ignore
 
 echo "[6/10] 安装Node.js..."
-if ! command -v node &> /dev/null; then
-    curl -fsSL https://deb.nodesource.com/setup_18.x | bash -
+if ! command -v node &> /dev/null || [ "$(node -v | sed 's/v//')" -lt "20" ]; then
+    echo "安装Node.js 20..."
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
     apt install -y nodejs
 fi
+# 升级npm
+npm install -g npm@latest
 
 echo "[7/10] 构建前端..."
 cd $APP_DIR/frontend
