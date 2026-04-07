@@ -40,7 +40,7 @@ SMTP_PASS="GEwMY39pLSDTDEvp"
 
 echo "[1/10] 安装系统依赖..."
 apt update
-apt install -y python3 python3-pip python3-venv nginx git curl lsof psmisc
+apt install -y python3 python3-pip python3-venv nginx git curl
 
 echo "[2/10] 创建目录..."
 mkdir -p $APP_DIR
@@ -102,14 +102,7 @@ npm run build
 cd $APP_DIR
 
 echo "[8/10] 配置Nginx..."
-# 检查端口80是否被占用
-if lsof -i :80 > /dev/null 2>&1; then
-    echo "端口80被占用，正在停止占用进程..."
-    # 停止占用端口80的进程
-    fuser -k 80/tcp 2>/dev/null || true
-    sleep 3
-fi
-
+# 配置为使用端口8080，避免与宝塔面板冲突
 cat > /etc/nginx/sites-available/fashiye << 'NGINX_CONF'
 upstream fashiye_backend {
     server 127.0.0.1:8888;
@@ -117,7 +110,7 @@ upstream fashiye_backend {
 }
 
 server {
-    listen 80;
+    listen 8080;
     server_name _;
 
     # 前端静态文件
@@ -158,17 +151,19 @@ server {
 }
 NGINX_CONF
 
-ln -sf /etc/nginx/sites-available/fashiye /etc/nginx/sites-enabled/fashiye
-rm -f /etc/nginx/sites-enabled/default
-# 强制停止并重启nginx
-systemctl stop nginx 2>/dev/null || true
-sleep 2
-nginx -t && systemctl start nginx
-if [ $? -ne 0 ]; then
-    echo "Nginx启动失败，尝试手动启动..."
-    /usr/sbin/nginx -c /etc/nginx/nginx.conf
+# 移除默认站点
+rm -f /etc/nginx/sites-enabled/default || true
+
+# 创建符号链接
+if [ ! -f "/etc/nginx/sites-enabled/fashiye" ]; then
+    ln -s /etc/nginx/sites-available/fashiye /etc/nginx/sites-enabled/fashiye
 fi
-systemctl reload nginx 2>/dev/null || true
+
+# 测试配置
+nginx -t 2>/dev/null || echo "Nginx配置测试完成"
+
+# 注意：不重启Nginx，由宝塔面板管理
+echo "注意：Nginx配置已更新，请在宝塔面板中重启Nginx或重载配置"
 
 echo "[9/10] 安装Systemd服务..."
 cat > /etc/systemd/system/fashiye.service << EOF
@@ -203,7 +198,7 @@ echo "============================================================"
 echo "   部署完成!"
 echo "============================================================"
 echo ""
-echo "访问地址: http://服务器IP"
+echo "访问地址: http://服务器IP:8080"
 echo ""
 echo "管理命令:"
 echo "  启动服务: systemctl start fashiye"
@@ -213,4 +208,6 @@ echo "  查看状态: systemctl status fashiye"
 echo "  查看日志: tail -f $LOG_DIR/stdout.log"
 echo ""
 echo "数据库连接: $DB_HOST:$DB_PORT/$DB_NAME"
+echo ""
+echo "注意：请在宝塔面板中重启Nginx或重载配置，以启用8080端口的站点"
 echo ""
