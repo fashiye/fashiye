@@ -188,6 +188,23 @@
   color: var(--primary-dark);
 }
 
+.forgot-password-link {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--gray-500);
+}
+
+.forgot-password-link a {
+  color: var(--gray-600);
+  text-decoration: none;
+  font-weight: 500;
+  transition: var(--transition);
+}
+
+.forgot-password-link a:hover {
+  color: var(--primary);
+}
+
 @media (max-width: 480px) {
   .login-card {
     padding: 36px 24px;

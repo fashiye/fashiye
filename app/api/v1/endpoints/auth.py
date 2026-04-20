@@ -3,19 +3,36 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.db.session import get_db
 from app.api.dependencies.auth import get_current_user
-from app.schemas.user import UserRegister, UserLogin, UserResponse, TokenResponse
+from app.schemas.user import (
+    UserRegister, UserLogin, UserResponse, TokenResponse,
+    ForgotPasswordRequest, ResetPasswordRequest
+)
 from app.models.user import User, Handler, Admin
 from app.core.security import create_access_token, verify_password, get_password_hash
 from app.core.exceptions import BusinessError
 from app.services.email_service import email_service
 from app.services.verification_service import verification_service
 from pydantic import BaseModel
+import re
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 class SendCodeRequest(BaseModel):
     email: str
+
+
+PASSWORD_MIN_LENGTH = 6
+
+
+def validate_password_strength(password: str) -> tuple[bool, str]:
+    if len(password) < PASSWORD_MIN_LENGTH:
+        return False, f"密码长度至少{PASSWORD_MIN_LENGTH}位"
+    if not re.search(r'[a-zA-Z]', password):
+        return False, "密码必须包含字母"
+    if not re.search(r'\d', password):
+        return False, "密码必须包含数字"
+    return True, ""
 
 
 @router.post("/send-code")
@@ -157,6 +174,83 @@ async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
         token_type="bearer",
         user=UserResponse(**user_response_data)
     )
+
+
+@router.post("/forgot-password")
+async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """
+    发送密码重置验证码
+    """
+    role = req.role
+    model_map = {
+        "user": User,
+        "handler": Handler,
+        "admin": Admin
+    }
+    
+    model = model_map.get(role)
+    if not model:
+        raise BusinessError("无效的角色")
+    
+    result = await db.execute(select(model).where(model.email == req.email))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise BusinessError("该邮箱未注册")
+    
+    if user.status != 1:
+        raise BusinessError("账号已被禁用，请联系管理员")
+    
+    code = verification_service.generate_code()
+    
+    stored = await verification_service.store_reset_code(req.email, code)
+    if not stored:
+        raise BusinessError("验证码存储失败")
+    
+    sent = await email_service.send_password_reset_code(req.email, code)
+    if not sent:
+        raise BusinessError("邮件发送失败，请检查邮箱地址")
+    
+    return {"message": "密码重置验证码已发送"}
+
+
+@router.post("/reset-password")
+async def reset_password(req: ResetPasswordRequest, db: AsyncSession = Depends(get_db)):
+    """
+    重置密码
+    """
+    is_valid = await verification_service.verify_reset_code(req.email, req.verification_code)
+    if not is_valid:
+        raise BusinessError("验证码错误或已过期")
+    
+    is_strong, msg = validate_password_strength(req.new_password)
+    if not is_strong:
+        raise BusinessError(msg)
+    
+    role = req.role
+    model_map = {
+        "user": User,
+        "handler": Handler,
+        "admin": Admin
+    }
+    
+    model = model_map.get(role)
+    if not model:
+        raise BusinessError("无效的角色")
+    
+    result = await db.execute(select(model).where(model.email == req.email))
+    user = result.scalar_one_or_none()
+    
+    if not user:
+        raise BusinessError("用户不存在")
+    
+    if user.status != 1:
+        raise BusinessError("账号已被禁用，请联系管理员")
+    
+    user.password = get_password_hash(req.new_password)
+    await db.commit()
+    
+    return {"message": "密码重置成功"}
 
 
 @router.get("/me", response_model=UserResponse)

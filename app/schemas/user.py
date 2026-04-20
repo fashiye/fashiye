@@ -18,6 +18,18 @@ class UserLogin(BaseModel):
     role: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+    role: str
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    role: str
+    verification_code: str
+    new_password: str
+
+
 class UserResponse(BaseModel):
     id: int
     username: str

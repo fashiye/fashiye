@@ -25,6 +25,18 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str
     SMTP_FROM: str
 
+    # Logging settings
+    LOG_LEVEL: str = "INFO"
+    LOG_DIR: str = "logs"
+    LOG_MAX_BYTES: int = 10485760  # 10MB
+    LOG_BACKUP_COUNT: int = 5
+    LOG_DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
+    LOG_FORMAT: str = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
+    LOG_ARCHIVE_DAYS: int = 30
+    LOG_ENABLE_CONSOLE: bool = True
+    LOG_ENABLE_FILE: bool = True
+    LOG_ENABLE_ARCHIVE: bool = True
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"

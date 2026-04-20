@@ -11,6 +11,9 @@ if "mysql" in settings.DATABASE_URL.lower():
     engine_kwargs.update({
         "pool_size": 20,
         "max_overflow": 10,
+        "pool_recycle": 3600,
+        "pool_pre_ping": True,
+        "pool_timeout": 30,
     })
 
 engine = create_async_engine(settings.DATABASE_URL, **engine_kwargs)
