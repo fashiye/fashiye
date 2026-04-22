@@ -31,6 +31,10 @@ const AdminDashboard = () => {
     navigate('/admin/settings');
   };
 
+  const handleDatabaseManagement = () => {
+    navigate('/admin/database');
+  };
+
   return (
     <div className="dashboard-container admin-dashboard">
       <header className="dashboard-header">
@@ -74,6 +78,12 @@ const AdminDashboard = () => {
             <h3>系统设置</h3>
             <p>平台系统配置</p>
             <button className="card-btn" onClick={handleSystemSettings}>系统设置</button>
+          </div>
+          
+          <div className="dashboard-card">
+            <h3>数据库管理</h3>
+            <p>直接管理数据库表数据</p>
+            <button className="card-btn" onClick={handleDatabaseManagement}>数据库管理</button>
           </div>
         </div>
       </main>

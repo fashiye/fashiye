@@ -19,7 +19,7 @@ async def get_all_users(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    user_role=Depends(require_role_dep(["admin"]))
+    user_role=Depends(require_role_dep(["super", "operator"]))
 ):
     admin, _ = user_role
     

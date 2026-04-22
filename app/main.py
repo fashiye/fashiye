@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.exceptions import BusinessError, AuthError
-from app.api.v1.endpoints import auth, orders, conversations, games, users
+from app.api.v1.endpoints import auth, orders, conversations, games, users, database_admin
 from app.services.verification_service import verification_service
 from app.core.logger import setup_logging, get_logger
 
@@ -43,6 +43,7 @@ app.include_router(orders.router, prefix="/api/v1", tags=["orders"])
 app.include_router(conversations.router, prefix="/api/v1", tags=["conversations"])
 app.include_router(games.router, prefix="/api/v1", tags=["games"])
 app.include_router(users.router, prefix="/api/v1", tags=["users"])
+app.include_router(database_admin.router, prefix="/api/v1", tags=["database-admin"])
 
 
 @app.exception_handler(BusinessError)

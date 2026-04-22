@@ -75,6 +75,8 @@ const Login = () => {
           navigate('/handler');
           break;
         case 'admin':
+        case 'super':
+        case 'operator':
           navigate('/admin');
           break;
         default:

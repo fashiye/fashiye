@@ -15,7 +15,7 @@ router = APIRouter(prefix="/games", tags=["games"])
 async def create_game(
     game_data: GameCreate,
     db: AsyncSession = Depends(get_db),
-    user_role=Depends(require_role(["admin"]))
+    user_role=Depends(require_role(["super", "operator"]))
 ):
     admin, _ = user_role
     
@@ -65,7 +65,7 @@ async def create_project(
     game_id: int,
     project_data: ProjectCreate,
     db: AsyncSession = Depends(get_db),
-    user_role=Depends(require_role(["admin"]))
+    user_role=Depends(require_role(["super", "operator"]))
 ):
     admin, _ = user_role
     

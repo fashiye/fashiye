@@ -288,6 +288,76 @@ class VerificationService:
         async with self._lock:
             self._clean_expired_codes_sync()
 
+    async def check_rate_limit(self, key: str, max_requests: int = 3, window_seconds: int = 60) -> bool:
+        """
+        检查请求速率限制
+        :param key: 限制键（如 email 或 IP）
+        :param max_requests: 时间窗口内最大请求数
+        :param window_seconds: 时间窗口（秒）
+        :return: True 表示允许请求，False 表示被限制
+        """
+        redis_client = await self._ensure_redis_connected()
+        rate_key = f"rate_limit:{key}"
+        
+        try:
+            if redis_client:
+                current = await redis_client.get(rate_key)
+                if current and int(current) >= max_requests:
+                    logger.warning(f"速率限制触发: {key}")
+                    return False
+                
+                pipe = redis_client.pipeline()
+                pipe.incr(rate_key)
+                pipe.expire(rate_key, window_seconds)
+                await pipe.execute()
+                return True
+            else:
+                async with self._lock:
+                    now = datetime.now()
+                    if key not in self.in_memory_store:
+                        self.in_memory_store[key] = {
+                            'count': 1,
+                            'expire_at': now + timedelta(seconds=window_seconds)
+                        }
+                        return True
+                    
+                    stored = self.in_memory_store[key]
+                    if now > stored['expire_at']:
+                        stored['count'] = 1
+                        stored['expire_at'] = now + timedelta(seconds=window_seconds)
+                        return True
+                    
+                    if stored['count'] >= max_requests:
+                        logger.warning(f"速率限制触发: {key}")
+                        return False
+                    
+                    stored['count'] += 1
+                    return True
+        except Exception as e:
+            logger.error(f"速率限制检查失败: {e}")
+            return True
+
+    async def get_rate_limit_remaining(self, key: str) -> int:
+        """
+        获取速率限制剩余时间（秒）
+        """
+        redis_client = await self._ensure_redis_connected()
+        rate_key = f"rate_limit:{key}"
+        
+        try:
+            if redis_client:
+                ttl = await redis_client.ttl(rate_key)
+                return max(0, ttl)
+            else:
+                async with self._lock:
+                    if key in self.in_memory_store:
+                        remaining = (self.in_memory_store[key]['expire_at'] - datetime.now()).total_seconds()
+                        return max(0, int(remaining))
+                return 0
+        except Exception as e:
+            logger.error(f"获取速率限制剩余时间失败: {e}")
+            return 0
+
     async def close(self):
         """
         关闭Redis连接和清理任务

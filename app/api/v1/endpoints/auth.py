@@ -155,7 +155,12 @@ async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
     if user.status != 1:
         raise HTTPException(status_code=403, detail="账号已被禁用")
     
-    token = create_access_token({"sub": str(user.id), "role": role})
+    # 确定实际角色：对于Admin使用数据库中的角色，其他使用输入角色
+    actual_role = role
+    if isinstance(user, Admin):
+        actual_role = user.role
+    
+    token = create_access_token({"sub": str(user.id), "role": actual_role})
     
     user_response_data = {
         "id": user.id,
@@ -163,7 +168,7 @@ async def login(user_data: UserLogin, db: AsyncSession = Depends(get_db)):
         "email": user.email,
         "avatar": user.avatar,
         "status": user.status,
-        "role": role
+        "role": actual_role
     }
     
     if hasattr(user, 'phone'):
@@ -181,6 +186,15 @@ async def forgot_password(req: ForgotPasswordRequest, db: AsyncSession = Depends
     """
     发送密码重置验证码
     """
+    rate_allowed = await verification_service.check_rate_limit(
+        f"forgot:{req.email}", 
+        max_requests=3, 
+        window_seconds=300
+    )
+    if not rate_allowed:
+        remaining = await verification_service.get_rate_limit_remaining(f"forgot:{req.email}")
+        raise BusinessError(f"请求过于频繁，请{remaining}秒后再试")
+    
     role = req.role
     model_map = {
         "user": User,
@@ -219,6 +233,15 @@ async def reset_password(req: ResetPasswordRequest, db: AsyncSession = Depends(g
     """
     重置密码
     """
+    rate_allowed = await verification_service.check_rate_limit(
+        f"reset:{req.email}", 
+        max_requests=5, 
+        window_seconds=300
+    )
+    if not rate_allowed:
+        remaining = await verification_service.get_rate_limit_remaining(f"reset:{req.email}")
+        raise BusinessError(f"请求过于频繁，请{remaining}秒后再试")
+    
     is_valid = await verification_service.verify_reset_code(req.email, req.verification_code)
     if not is_valid:
         raise BusinessError("验证码错误或已过期")

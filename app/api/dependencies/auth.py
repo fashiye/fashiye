@@ -31,7 +31,9 @@ async def get_current_user(
         user = await db.get(User, user_id)
     elif role == "handler":
         user = await db.get(Handler, user_id)
-    elif role == "admin":
+    elif role in ["super", "operator"]:
+        # Admin模型的role字段只包含'super'和'operator'两种角色
+        # 登录时会将用户选择的'admin'角色替换为数据库中的实际角色
         user = await db.get(Admin, user_id)
     else:
         raise AuthError("无效的角色")

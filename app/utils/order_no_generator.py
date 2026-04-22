@@ -1,8 +1,8 @@
 import time
-import random
+import secrets
 
 
 def generate_order_no():
     timestamp = str(int(time.time() * 1000))
-    random_part = ''.join(random.choices('0123456789', k=4))
+    random_part = ''.join(secrets.choice('0123456789') for _ in range(4))
     return f"BO{timestamp}{random_part}"

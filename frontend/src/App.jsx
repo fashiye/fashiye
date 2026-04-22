@@ -18,6 +18,7 @@ import OrderDetail from './pages/OrderDetail';
 import MessageList from './pages/MessageList';
 import Chat from './pages/Chat';
 import AdminOrderReview from './pages/AdminOrderReview';
+import DatabaseAdmin from './pages/DatabaseAdmin';
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
@@ -45,7 +46,7 @@ const App = () => {
       <Routes>
         <Route 
           path="/" 
-          element={isAuthenticated ? <Navigate to={`/${userRole}`} /> : <Login />} 
+          element={isAuthenticated ? <Navigate to={`/${userRole === 'super' || userRole === 'operator' ? 'admin' : userRole}`} /> : <Login />} 
         />
         
         <Route 
@@ -221,6 +222,15 @@ const App = () => {
           element={
             <ProtectedRoute requiredRole="admin">
               <AdminOrderReview />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/admin/database" 
+          element={
+            <ProtectedRoute requiredRole="admin">
+              <DatabaseAdmin />
             </ProtectedRoute>
           } 
         />

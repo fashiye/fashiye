@@ -23,7 +23,6 @@ router = APIRouter(prefix="/orders", tags=["orders"])
 
 def build_order_response(order) -> OrderResponse:
     """构建订单响应对象"""
-    # 构建项目列表
     items = []
     for item in order.items:
         items.append(OrderItemResponse(
@@ -35,7 +34,6 @@ def build_order_response(order) -> OrderResponse:
             totalPrice=item.total_price
         ))
     
-    # 兼容历史订单（没有items的情况）
     if not items and order.project_id:
         items.append(OrderItemResponse(
             id=0,
@@ -81,9 +79,8 @@ def build_item_summary(order) -> str:
         for item in order.items:
             project_name = item.project.name if item.project else "未知项目"
             summaries.append(f"{project_name} x{item.quantity}")
-        return ", ".join(summaries[:3])  # 最多显示3个项目
+        return ", ".join(summaries[:3])
     
-    # 兼容历史订单
     if order.project_id and order.project:
         return f"{order.project.name} x{order.quantity or 1}"
     elif order.custom_name:
@@ -100,7 +97,6 @@ async def create_order(
 ):
     user, _ = user_role
     order = await OrderService.create_order(db, user, order_data)
-    # 重新加载订单以获取关联数据
     order = await OrderService.get_order(db, order.id)
     return build_order_response(order)
 
@@ -111,7 +107,7 @@ async def get_order_pool(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    user_role=Depends(require_role_dep(["handler", "admin"]))
+    user_role=Depends(require_role_dep(["handler", "super", "operator"]))
 ):
     orders = await OrderService.get_order_pool(db, game_id, page, size)
     
@@ -139,7 +135,7 @@ async def get_all_orders(
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
-    user_role=Depends(require_role_dep(["admin"]))
+    user_role=Depends(require_role_dep(["super", "operator"]))
 ):
     admin, _ = user_role
     
@@ -162,34 +158,6 @@ async def get_all_orders(
     return [build_order_response(order) for order in orders]
 
 
-@router.post("/{order_id}/accept", response_model=OrderResponse)
-async def accept_order(
-    order_id: int,
-    db: AsyncSession = Depends(get_db),
-    user_role=Depends(require_role_dep(["handler"]))
-):
-    handler, _ = user_role
-    order = await OrderService.accept_order(db, order_id, handler)
-    # 重新加载订单以获取关联数据
-    order = await OrderService.get_order(db, order.id)
-    return build_order_response(order)
-
-
-@router.post("/{order_id}/cancel", response_model=OrderResponse)
-async def cancel_order(
-    order_id: int,
-    db: AsyncSession = Depends(get_db),
-    user_role=Depends(get_current_user)
-):
-    user, role = user_role
-    order = await OrderService.update_order_status(
-        db, order_id, "cancel", role, user.id
-    )
-    # 重新加载订单以获取关联数据
-    order = await OrderService.get_order(db, order.id)
-    return build_order_response(order)
-
-
 @router.get("/my", response_model=List[OrderResponse])
 async def get_my_orders(
     status: str = Query(None),
@@ -210,6 +178,18 @@ async def get_my_orders(
     return [build_order_response(order) for order in orders]
 
 
+@router.get("/pending-review", response_model=List[OrderResponse])
+async def get_pending_review_orders(
+    page: int = Query(1, ge=1),
+    size: int = Query(20, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    user_role=Depends(require_role_dep(["super", "operator"]))
+):
+    admin, _ = user_role
+    orders = await OrderService.get_pending_review_orders(db, page, size)
+    return [build_order_response(order) for order in orders]
+
+
 @router.get("/{order_id}", response_model=OrderResponse)
 async def get_order_detail(
     order_id: int,
@@ -227,7 +207,6 @@ async def get_order_detail(
     if role == "handler" and order.handler_id != user.id:
         raise BusinessError("无权访问此订单", code=403)
     
-    # 加载关联数据
     result = await db.execute(
         select(Order)
         .options(
@@ -240,6 +219,32 @@ async def get_order_detail(
     order_with_relations = result.scalar_one()
     
     return build_order_response(order_with_relations)
+
+
+@router.post("/{order_id}/accept", response_model=OrderResponse)
+async def accept_order(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    user_role=Depends(require_role_dep(["handler"]))
+):
+    handler, _ = user_role
+    order = await OrderService.accept_order(db, order_id, handler)
+    order = await OrderService.get_order(db, order.id)
+    return build_order_response(order)
+
+
+@router.post("/{order_id}/cancel", response_model=OrderResponse)
+async def cancel_order(
+    order_id: int,
+    db: AsyncSession = Depends(get_db),
+    user_role=Depends(get_current_user)
+):
+    user, role = user_role
+    order = await OrderService.update_order_status(
+        db, order_id, "cancel", role, user.id
+    )
+    order = await OrderService.get_order(db, order.id)
+    return build_order_response(order)
 
 
 @router.post("/{order_id}/status", response_model=OrderResponse)
@@ -265,32 +270,18 @@ async def update_order_status(
         status_data.remark, status_data.completionProof
     )
     
-    # 重新加载订单以获取关联数据
     order = await OrderService.get_order(db, order.id)
     return build_order_response(order)
-
-
-@router.get("/pending-review", response_model=List[OrderResponse])
-async def get_pending_review_orders(
-    page: int = Query(1, ge=1),
-    size: int = Query(20, ge=1, le=100),
-    db: AsyncSession = Depends(get_db),
-    user_role=Depends(require_role_dep(["admin"]))
-):
-    admin, _ = user_role
-    orders = await OrderService.get_pending_review_orders(db, page, size)
-    return [build_order_response(order) for order in orders]
 
 
 @router.post("/{order_id}/approve", response_model=OrderResponse)
 async def approve_order(
     order_id: int,
     db: AsyncSession = Depends(get_db),
-    user_role=Depends(require_role_dep(["admin"]))
+    user_role=Depends(require_role_dep(["super", "operator"]))
 ):
     admin, _ = user_role
     order = await OrderService.approve_order(db, order_id, admin.id)
-    # 重新加载订单以获取关联数据
     order = await OrderService.get_order(db, order.id)
     return build_order_response(order)
 
@@ -300,11 +291,10 @@ async def reject_order(
     order_id: int,
     remark: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db),
-    user_role=Depends(require_role_dep(["admin"]))
+    user_role=Depends(require_role_dep(["super", "operator"]))
 ):
     admin, _ = user_role
     order = await OrderService.reject_order(db, order_id, admin.id, remark)
-    # 重新加载订单以获取关联数据
     order = await OrderService.get_order(db, order.id)
     return build_order_response(order)
 
