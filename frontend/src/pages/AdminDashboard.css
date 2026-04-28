@@ -1,0 +1,4 @@
+.admin-dashboard {
+  min-height: 100vh;
+  background: var(--gray-50);
+}
