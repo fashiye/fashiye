@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import './Register.css';
 
 const AUTH_CHANGE_EVENT = 'auth:changed';
@@ -134,7 +134,7 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/register`, {
+      const response = await api.post('/auth/register', {
         username,
         email,
         password,
@@ -205,7 +205,7 @@ const Register = () => {
 
     setIsSendingCode(true);
     try {
-      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/send-code`, {
+      await api.post('/auth/send-code', {
         email
       });
       setError('');

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import './Login.css';
 
 const AUTH_CHANGE_EVENT = 'auth:changed';
@@ -51,7 +51,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/login`, {
+      const response = await api.post('/auth/login', {
         username,
         password,
         role

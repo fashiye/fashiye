@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import './ForgotPassword.css';
 
 const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
@@ -55,7 +55,7 @@ const ForgotPassword = () => {
     setIsLoading(true);
 
     try {
-      await axios.post(`${import.meta.env.VITE_API_BASE_URL}/auth/forgot-password`, {
+      await api.post('/auth/forgot-password', {
         email,
         role
       });
