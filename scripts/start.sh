@@ -12,7 +12,7 @@ GUNICORN_BIND=${GUNICORN_BIND:-"0.0.0.0:8888"}
 
 mkdir -p "$LOG_DIR"
 
-exec gunicorn app.main:app \
+exec gunicorn app.主程序:app \
     --worker-class uvicorn.workers.UvicornWorker \
     --workers "$GUNICORN_WORKERS" \
     --bind "$GUNICORN_BIND" \

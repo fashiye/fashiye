@@ -60,10 +60,10 @@ echo "[5/7] 验证数据库连接..."
 source "$APP_DIR/venv/bin/activate"
 cd "$APP_DIR"
 python3 -c "
-from app.core.config import settings
+from app.核心.配置 import 配置对象
 import re
 
-url = settings.DATABASE_URL
+url = 配置对象.数据库连接字符串
 match = re.search(r'://([^:]+):([^@]+)@([^:]+):(\d+)/([^?]+)', url)
 if match:
     user, pwd, host, port, db = match.groups()
@@ -98,9 +98,9 @@ cd "$APP_DIR"
 
 TABLE_COUNT=$(python3 -c "
 import asyncio, aiomysql
-from app.core.config import settings
+from app.核心.配置 import 配置对象
 import re
-match = re.search(r'://([^:]+):([^@]+)@([^:]+):(\d+)/([^?]+)', settings.DATABASE_URL)
+match = re.search(r'://([^:]+):([^@]+)@([^:]+):(\d+)/([^?]+)', 配置对象.数据库连接字符串)
 user, pwd, host, port, db = match.groups()
 async def check():
     conn = await aiomysql.connect(host=host, port=int(port), user=user, password=pwd, db=db, connect_timeout=5)
@@ -117,9 +117,9 @@ if [ "$TABLE_COUNT" -gt 0 ]; then
     echo "  检测到已有 $TABLE_COUNT 张表，跳过全量建表"
     python3 -c "
 import asyncio, aiomysql
-from app.core.config import settings
+from app.核心.配置 import 配置对象
 import re
-match = re.search(r'://([^:]+):([^@]+)@([^:]+):(\d+)/([^?]+)', settings.DATABASE_URL)
+match = re.search(r'://([^:]+):([^@]+)@([^:]+):(\d+)/([^?]+)', 配置对象.数据库连接字符串)
 user, pwd, host, port, db = match.groups()
 async def migrate():
     conn = await aiomysql.connect(host=host, port=int(port), user=user, password=pwd, db=db, connect_timeout=5)
@@ -137,8 +137,7 @@ asyncio.run(migrate())
 else
     echo "  空数据库，自动创建所有表..."
     python3 -c "
-from app.models import Base
-from app.db.session import engine
+from app.数据库.会话 import 数据库基类 as Base, 引擎 as engine
 import asyncio
 async def init():
     async with engine.begin() as conn:

@@ -4,7 +4,7 @@ APP_NAME="fashiye"
 
 echo "停止 $APP_NAME 服务..."
 
-PID=$(pgrep -f "gunicorn.*app.main:app" | head -1)
+PID=$(pgrep -f "gunicorn.*app.主程序:app" | head -1)
 
 if [ -z "$PID" ]; then
     echo "$APP_NAME 后端服务未运行"
