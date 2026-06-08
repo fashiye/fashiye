@@ -23,6 +23,10 @@ const UserDashboard = () => {
     navigate('/user/messages');
   };
 
+  const handleAccount = () => {
+    navigate('/user/account');
+  };
+
   return (
     <div className="dashboard-container user-dashboard">
       <header className="dashboard-header">
@@ -59,7 +63,7 @@ const UserDashboard = () => {
           <div className="dashboard-card">
             <h3>账户管理</h3>
             <p>修改个人信息和密码</p>
-            <button className="card-btn">账户设置</button>
+            <button className="card-btn" onClick={handleAccount}>账户设置</button>
           </div>
         </div>
       </main>

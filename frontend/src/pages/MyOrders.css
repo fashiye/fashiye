@@ -306,6 +306,30 @@
   border-color: var(--primary-dark, #1d4ed8);
 }
 
+.status-abnormal {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.abnormal-btn {
+  flex: 1;
+  padding: 9px 12px;
+  background: white;
+  color: #d97706;
+  border: 1.5px solid #fde68a;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.abnormal-btn:hover {
+  background: #d97706;
+  color: white;
+  border-color: #d97706;
+}
+
 .pagination {
   display: flex;
   justify-content: center;
@@ -366,7 +390,105 @@
   .view-btn,
   .cancel-btn,
   .accept-btn,
-  .complete-btn {
+  .complete-btn,
+  .abnormal-btn {
     width: 100%;
   }
+}
+
+/* Modal styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+  backdrop-filter: blur(4px);
+}
+
+.abnormal-modal {
+  background: white;
+  border-radius: var(--radius-lg);
+  padding: 32px;
+  width: 480px;
+  max-width: 90vw;
+  box-shadow: var(--shadow-xl);
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gray-900);
+  margin: 0 0 8px 0;
+  text-align: center;
+}
+
+.modal-desc {
+  font-size: 14px;
+  color: var(--gray-500);
+  text-align: center;
+  margin: 0 0 20px 0;
+}
+
+.modal-textarea {
+  width: 100%;
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 14px;
+  font-size: 14px;
+  color: var(--gray-800);
+  resize: vertical;
+  transition: var(--transition);
+  outline: none;
+  font-family: inherit;
+  min-height: 100px;
+}
+
+.modal-textarea:focus {
+  border-color: #d97706;
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
+}
+
+.modal-textarea::placeholder {
+  color: var(--gray-400);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.modal-btn {
+  flex: 1;
+  height: 44px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.modal-btn.cancel {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
+.modal-btn.cancel:hover {
+  background: var(--gray-200);
+}
+
+.modal-btn.confirm.abnormal {
+  background: #d97706;
+  color: white;
+}
+
+.modal-btn.confirm.abnormal:hover {
+  background: #b45309;
 }

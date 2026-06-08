@@ -9,6 +9,8 @@ import UserDashboard from './pages/UserDashboard';
 import HandlerDashboard from './pages/HandlerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminUsers from './pages/AdminUsers';
+import AdminHandlers from './pages/AdminHandlers';
+import AdminAdmins from './pages/AdminAdmins';
 import AdminOrders from './pages/AdminOrders';
 import AdminGames from './pages/AdminGames';
 import CreateOrder from './pages/CreateOrder';
@@ -19,6 +21,9 @@ import MessageList from './pages/MessageList';
 import Chat from './pages/Chat';
 import AdminOrderReview from './pages/AdminOrderReview';
 import DatabaseAdmin from './pages/DatabaseAdmin';
+import AccountSettings from './pages/AccountSettings';
+import GameOrderPage from './pages/GameOrderPage';
+import OrderLookup from './pages/OrderLookup';
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
@@ -119,6 +124,15 @@ const App = () => {
         />
         
         <Route 
+          path="/user/account" 
+          element={
+            <ProtectedRoute requiredRole="user">
+              <AccountSettings />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
           path="/handler" 
           element={
             <ProtectedRoute requiredRole="handler">
@@ -173,6 +187,15 @@ const App = () => {
         />
         
         <Route 
+          path="/handler/account" 
+          element={
+            <ProtectedRoute requiredRole="handler">
+              <AccountSettings />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
           path="/admin" 
           element={
             <ProtectedRoute requiredRole="operator">
@@ -184,8 +207,26 @@ const App = () => {
         <Route 
           path="/admin/users" 
           element={
-            <ProtectedRoute requiredRole="operator">
+            <ProtectedRoute requiredRole="super">
               <AdminUsers />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/handlers" 
+          element={
+            <ProtectedRoute requiredRole="super">
+              <AdminHandlers />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/admins" 
+          element={
+            <ProtectedRoute requiredRole="super">
+              <AdminAdmins />
             </ProtectedRoute>
           } 
         />
@@ -233,6 +274,22 @@ const App = () => {
               <DatabaseAdmin />
             </ProtectedRoute>
           } 
+        />
+        
+        {/* 公开页面 - 无需登录 */}
+        <Route 
+          path="/game-order" 
+          element={<GameOrderPage />} 
+        />
+        
+        <Route 
+          path="/order-lookup" 
+          element={<OrderLookup />} 
+        />
+        
+        <Route 
+          path="/order-detail/:orderId" 
+          element={<OrderDetail />} 
         />
         
         <Route path="*" element={<Navigate to="/" />} />

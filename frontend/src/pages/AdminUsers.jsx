@@ -3,96 +3,74 @@ import api from '../utils/api';
 import './AdminDashboard.css';
 
 const AdminUsers = () => {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [totalUsers, setTotalUsers] = useState(0);
-  const pageSize = 10;
+  const [用户列表, set用户列表] = useState([]);
+  const [加载中, set加载中] = useState(true);
+  const [当前页, set当前页] = useState(1);
+  const [总页数, set总页数] = useState(1);
+  const [总条数, set总条数] = useState(0);
+  const 每页条数 = 10;
 
   useEffect(() => {
-    fetchUsers();
-    fetchCurrentUser();
-  }, [currentPage]);
+    获取用户列表();
+  }, [当前页]);
 
-  const fetchUsers = async () => {
+  const 获取用户列表 = async () => {
+    set加载中(true);
     try {
-      const response = await api.get(`/users?page=${currentPage}&size=${pageSize}`);
-      setUsers(response.data.items);
-      setTotalPages(response.data.pages);
-      setTotalUsers(response.data.total);
-    } catch (err) {
-      console.error('获取用户列表失败:', err);
+      const 响应 = await api.get('/admin/users', { params: { page: 当前页, size: 每页条数 } });
+      set用户列表(响应.data.items);
+      set总页数(响应.data.pages);
+      set总条数(响应.data.total);
+    } catch (错误) {
+      console.error('获取用户列表失败:', 错误);
     } finally {
-      setLoading(false);
+      set加载中(false);
     }
   };
 
-  const fetchCurrentUser = async () => {
+  const 处理封禁解禁 = async (用户id, 用户名, 当前状态) => {
+    const 操作文本 = 当前状态 === 1 ? '封禁' : '解禁';
+    if (!window.confirm(`确定${操作文本}用户 "${用户名}" 吗？${操作文本 === '封禁' ? '被封禁用户无法登录系统。' : ''}`)) return;
     try {
-      const response = await api.get('/auth/me');
-      setCurrentUser(response.data);
-    } catch (err) {
-      console.error('获取当前用户信息失败:', err);
+      const 响应 = await api.put(`/admin/users/${用户id}/ban`);
+      alert(响应.data.message || `${操作文本}成功`);
+      获取用户列表();
+    } catch (错误) {
+      alert(`${操作文本}失败: ${错误.response?.data?.detail || '未知错误'}`);
     }
   };
 
-  const handleDeleteUser = async (userId, username, role) => {
-    if (!window.confirm(`确定要删除用户 "${username}" 吗？此操作不可恢复！`)) {
-      return;
-    }
-
+  const 处理删除用户 = async (用户id, 用户名) => {
+    if (!window.confirm(`确定要删除用户 "${用户名}" 吗？此操作不可恢复！`)) return;
     try {
-      await api.delete(`/users/${userId}?role=${role}`);
+      await api.delete(`/users/${用户id}?role=user`);
       alert('用户删除成功！');
-      fetchUsers();
-    } catch (err) {
-      const errorMsg = err.response?.data?.detail || '删除失败';
-      alert(`删除失败: ${errorMsg}`);
+      获取用户列表();
+    } catch (错误) {
+      alert(`删除失败: ${错误.response?.data?.detail || '未知错误'}`);
     }
   };
 
-  const handlePageChange = (newPage) => {
-    if (newPage >= 1 && newPage <= totalPages) {
-      setCurrentPage(newPage);
-    }
-  };
-
-  const renderPagination = () => {
-    const pages = [];
-    const maxVisiblePages = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-
-    if (endPage - startPage < maxVisiblePages - 1) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1);
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pages.push(
+  const 渲染分页 = () => {
+    if (总页数 <= 1) return null;
+    const 页码 = [];
+    for (let i = 1; i <= 总页数; i++) {
+      页码.push(
         <button
           key={i}
-          onClick={() => handlePageChange(i)}
+          onClick={() => set当前页(i)}
           style={{
-            padding: '8px 12px',
-            margin: '0 4px',
-            border: '1px solid #ddd',
-            backgroundColor: i === currentPage ? '#007bff' : 'white',
-            color: i === currentPage ? 'white' : '#333',
-            cursor: 'pointer',
-            borderRadius: '4px'
+            padding: '8px 12px', margin: '0 4px', border: '1px solid #ddd',
+            backgroundColor: i === 当前页 ? '#007bff' : 'white',
+            color: i === 当前页 ? 'white' : '#333', cursor: 'pointer', borderRadius: '4px'
           }}
         >
           {i}
         </button>
       );
     }
-
-    return pages;
+    return 页码;
   };
-
-  const isSuperAdmin = currentUser?.role === 'super';
 
   return (
     <div className="dashboard-container admin-dashboard">
@@ -101,14 +79,16 @@ const AdminUsers = () => {
           <h1>用户管理</h1>
         </div>
         <div className="header-right">
-          <button className="logout-btn" onClick={() => window.history.back()}>
-            返回
-          </button>
+          <button className="logout-btn" onClick={() => window.history.back()}>返回</button>
         </div>
       </header>
-      
+
       <main className="dashboard-content">
-        {loading ? (
+        <div style={{ marginBottom: '15px', color: '#666', fontSize: '14px' }}>
+          共 {总条数} 条记录
+        </div>
+
+        {加载中 ? (
           <div className="loading">加载中...</div>
         ) : (
           <div className="users-list">
@@ -118,89 +98,73 @@ const AdminUsers = () => {
                   <th>ID</th>
                   <th>用户名</th>
                   <th>邮箱</th>
-                  <th>角色</th>
                   <th>状态</th>
                   <th>创建时间</th>
-                  {isSuperAdmin && <th>操作</th>}
+                  <th>操作</th>
                 </tr>
               </thead>
               <tbody>
-                {users.map(user => (
-                  <tr key={`${user.role}-${user.id}`}>
-                    <td>{user.id}</td>
-                    <td>{user.username}</td>
-                    <td>{user.email}</td>
-                    <td>{user.role}</td>
-                    <td>{user.status === 1 ? '正常' : '禁用'}</td>
-                    <td>{new Date(user.createdAt).toLocaleString()}</td>
-                    {isSuperAdmin && (
-                      <td>
+                {用户列表.map(用户 => (
+                  <tr key={用户.id}>
+                    <td>{用户.id}</td>
+                    <td>{用户.username}</td>
+                    <td>{用户.email}</td>
+                    <td>
+                      <span style={{
+                        padding: '3px 8px', borderRadius: '3px', fontSize: '13px',
+                        backgroundColor: 用户.status === 1 ? '#d4edda' : '#f8d7da',
+                        color: 用户.status === 1 ? '#155724' : '#721c24'
+                      }}>
+                        {用户.status === 1 ? '正常' : '已封禁'}
+                      </span>
+                    </td>
+                    <td>{new Date(用户.createdAt).toLocaleString()}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '5px' }}>
                         <button
-                          className="delete-btn"
-                          onClick={() => handleDeleteUser(user.id, user.username, user.role)}
+                          onClick={() => 处理封禁解禁(用户.id, 用户.username, 用户.status)}
                           style={{
-                            padding: '5px 15px',
-                            backgroundColor: '#ff4444',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '14px'
+                            padding: '5px 12px',
+                            backgroundColor: 用户.status === 1 ? '#ffc107' : '#17a2b8',
+                            color: 用户.status === 1 ? '#333' : 'white',
+                            border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px'
+                          }}
+                        >
+                          {用户.status === 1 ? '封禁' : '解禁'}
+                        </button>
+                        <button
+                          onClick={() => 处理删除用户(用户.id, 用户.username)}
+                          style={{
+                            padding: '5px 12px', backgroundColor: '#dc3545', color: 'white',
+                            border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px'
                           }}
                         >
                           删除
                         </button>
-                      </td>
-                    )}
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            
-            {totalPages > 1 && (
-              <div style={{
-                display: 'flex',
-                justifyContent: 'center',
-                alignItems: 'center',
-                marginTop: '20px',
-                padding: '20px'
-              }}>
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  style={{
-                    padding: '8px 16px',
-                    margin: '0 4px',
-                    border: '1px solid #ddd',
-                    backgroundColor: currentPage === 1 ? '#f5f5f5' : 'white',
-                    color: currentPage === 1 ? '#ccc' : '#333',
-                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                    borderRadius: '4px'
-                  }}
-                >
-                  上一页
-                </button>
-                
-                {renderPagination()}
-                
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  style={{
-                    padding: '8px 16px',
-                    margin: '0 4px',
-                    border: '1px solid #ddd',
-                    backgroundColor: currentPage === totalPages ? '#f5f5f5' : 'white',
-                    color: currentPage === totalPages ? '#ccc' : '#333',
-                    cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                    borderRadius: '4px'
-                  }}
-                >
-                  下一页
-                </button>
-                
+
+            {总页数 > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginTop: '20px', padding: '20px' }}>
+                <button onClick={() => set当前页(p => Math.max(1, p - 1))} disabled={当前页 === 1} style={{
+                  padding: '8px 16px', margin: '0 4px', border: '1px solid #ddd',
+                  backgroundColor: 当前页 === 1 ? '#f5f5f5' : 'white',
+                  color: 当前页 === 1 ? '#ccc' : '#333',
+                  cursor: 当前页 === 1 ? 'not-allowed' : 'pointer', borderRadius: '4px'
+                }}>上一页</button>
+                {渲染分页()}
+                <button onClick={() => set当前页(p => Math.min(总页数, p + 1))} disabled={当前页 === 总页数} style={{
+                  padding: '8px 16px', margin: '0 4px', border: '1px solid #ddd',
+                  backgroundColor: 当前页 === 总页数 ? '#f5f5f5' : 'white',
+                  color: 当前页 === 总页数 ? '#ccc' : '#333',
+                  cursor: 当前页 === 总页数 ? 'not-allowed' : 'pointer', borderRadius: '4px'
+                }}>下一页</button>
                 <span style={{ marginLeft: '20px', color: '#666' }}>
-                  共 {totalUsers} 条记录，第 {currentPage}/{totalPages} 页
+                  共 {总条数} 条记录，第 {当前页}/{总页数} 页
                 </span>
               </div>
             )}

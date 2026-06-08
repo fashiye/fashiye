@@ -27,6 +27,14 @@ const Chat = () => {
     try {
       const response = await api.get(`/conversations/${conversationId}/messages`);
       setMessages(response.data);
+      // 获取消息后自动标记已读
+      const messages数据 = response.data;
+      if (messages数据.length > 0) {
+        const 最后消息id = messages数据[messages数据.length - 1].id;
+        await api.post(`/conversations/${conversationId}/read`, {
+          last_read_message_id: 最后消息id
+        });
+      }
     } catch (err) {
       console.error('获取消息失败:', err);
     } finally {

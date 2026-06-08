@@ -7,7 +7,7 @@ const AUTH_CHANGE_EVENT = 'auth:changed';
 
 const Login = () => {
   const [role, setRole] = useState('user');
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -29,7 +29,7 @@ const Login = () => {
   ];
 
   const clearForm = () => {
-    setUsername('');
+    setEmail('');
     setPassword('');
     setError('');
   };
@@ -38,8 +38,8 @@ const Login = () => {
     e.preventDefault();
     setError('');
 
-    if (!username.trim()) {
-      setError('请输入用户名');
+    if (!email.trim()) {
+      setError('请输入邮箱地址');
       return;
     }
 
@@ -52,7 +52,7 @@ const Login = () => {
 
     try {
       const response = await api.post('/auth/login', {
-        username,
+        email,
         password,
         role
       });
@@ -83,12 +83,12 @@ const Login = () => {
           navigate('/user');
       }
     } catch (err) {
-      let errorMsg = '登录失败，请检查用户名和密码';
-      
+      let errorMsg = '登录失败，请检查邮箱和密码';
+
       if (!err.response) {
         errorMsg = '网络连接失败，请检查网络设置';
       } else if (err.response.status === 401) {
-        errorMsg = '用户名或密码错误';
+        errorMsg = '邮箱或密码错误';
       } else if (err.response.status === 403) {
         errorMsg = '账号已被禁用，请联系管理员';
       } else if (err.response.status === 429) {
@@ -100,7 +100,7 @@ const Login = () => {
       } else if (err.response.data?.detail) {
         errorMsg = err.response.data.detail;
       }
-      
+
       setError(errorMsg);
       console.error('Login error:', err);
       if (err.response) {
@@ -134,16 +134,15 @@ const Login = () => {
           {error && <div className="error-message">{error}</div>}
 
           <div className="input-group">
-            <label>用户名</label>
+            <label>邮箱</label>
             <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
               disabled={isLoading}
-              minLength={3}
-              maxLength={50}
-              placeholder="请输入用户名"
+              maxLength={100}
+              placeholder="请输入邮箱地址"
             />
           </div>
 
@@ -160,8 +159,8 @@ const Login = () => {
             />
           </div>
 
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="login-btn"
             disabled={isLoading}
           >

@@ -143,6 +143,13 @@ const Register = () => {
         verification_code: verificationCode
       });
 
+      if (role === 'handler') {
+        setError('');
+        alert('注册成功！您的账号正在等待管理员审批，审批通过后即可登录。');
+        navigate('/');
+        return;
+      }
+
       const token = response.data.access_token;
       localStorage.setItem('token', token);
       localStorage.setItem('role', role);
@@ -155,9 +162,6 @@ const Register = () => {
       switch (role) {
         case 'user':
           navigate('/user');
-          break;
-        case 'handler':
-          navigate('/handler');
           break;
         default:
           navigate('/user');
@@ -253,6 +257,20 @@ const Register = () => {
           ))}
         </div>
 
+        {role === 'handler' && (
+          <div style={{
+            backgroundColor: '#fff3cd',
+            border: '1px solid #ffc107',
+            borderRadius: '4px',
+            padding: '12px',
+            marginBottom: '16px',
+            fontSize: '14px',
+            color: '#856404'
+          }}>
+            <strong>注意：</strong>打手注册需要管理员审批，注册成功后请等待审核，审核通过后即可登录接单。
+          </div>
+        )}
+
         <form onSubmit={handleRegister} className="register-form">
           {error && <div className="error-message">{error}</div>}
 
@@ -264,8 +282,8 @@ const Register = () => {
               onChange={(e) => setUsername(e.target.value)}
               required
               disabled={isLoading}
-              minLength={3}
-              maxLength={50}
+              minLength={1}
+              maxLength={10}
             />
           </div>
 

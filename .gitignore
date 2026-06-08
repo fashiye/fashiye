@@ -54,7 +54,7 @@ screenshots/
 *.sqlite3
 
 node_modules/
-frontend/node_modules/
+叶狼游戏代肝/node_modules/
 
 test_*.py
 check_*.py

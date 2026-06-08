@@ -47,7 +47,7 @@ pip install -r requirements.txt
 
 4. 安装前端依赖并构建
 ```bash
-cd frontend
+cd 叶狼游戏代肝
 npm install
 npm run build
 cd ..
@@ -81,7 +81,7 @@ fashiye/
 │   ├── schemas/        # Pydantic模型
 │   ├── services/       # 业务逻辑
 │   └── utils/          # 工具函数
-├── frontend/           # 前端应用
+├── 叶狼游戏代肝/           # 前端应用
 ├── scripts/            # 部署脚本
 └── alembic/            # 数据库迁移
 ```

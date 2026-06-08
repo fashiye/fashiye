@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
+import ChatPanel from '../components/ChatPanel';
 import './OrderDetail.css';
 
 const OrderDetail = () => {
@@ -10,6 +11,12 @@ const OrderDetail = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
+  const 当前用户 = JSON.parse(localStorage.getItem('user') || '{}');
+  const 当前角色 = localStorage.getItem('role');
+
+  const 是发单人 = (order) => 当前用户?.id === order?.userId && 当前角色 === 'user';
+  const 是接单人 = (order) => 当前用户?.id === order?.handlerId && 当前角色 === 'handler';
+
   useEffect(() => {
     fetchOrderDetail();
   }, [orderId]);
@@ -18,7 +25,7 @@ const OrderDetail = () => {
     setIsLoading(true);
     try {
       const response = await api.get(`/orders/${orderId}`);
-      setOrder(response.data);
+      setOrder(response.data.data);
     } catch (err) {
       console.error('获取订单详情失败:', err);
       setError(err.response?.data?.detail || '获取订单详情失败');
@@ -36,7 +43,8 @@ const OrderDetail = () => {
       'review': '待验收',
       'completed': '已完成',
       'cancelled': '已取消',
-      'disputed': '争议中'
+      'disputed': '争议中',
+      'abnormal': '异常'
     };
     return map[status] || status;
   };
@@ -50,7 +58,8 @@ const OrderDetail = () => {
       'review': 'status-review',
       'completed': 'status-completed',
       'cancelled': 'status-cancelled',
-      'disputed': 'status-disputed'
+      'disputed': 'status-disputed',
+      'abnormal': 'status-abnormal'
     };
     return map[status] || '';
   };
@@ -72,6 +81,28 @@ const OrderDetail = () => {
       fetchOrderDetail();
     } catch (err) {
       alert('取消订单失败：' + (err.response?.data?.detail || err.message));
+    }
+  };
+
+  const handleStartOrder = async () => {
+    if (!confirm('确定开始执行订单？')) return;
+    try {
+      await api.post(`/orders/${orderId}/status`, { action: 'start' });
+      alert('已标记为开始执行');
+      fetchOrderDetail();
+    } catch (err) {
+      alert('操作失败：' + (err.response?.data?.detail || err.message));
+    }
+  };
+
+  const handleSubmitComplete = async () => {
+    if (!confirm('确定提交完成？提交后将等待发单人验收。')) return;
+    try {
+      await api.post(`/orders/${orderId}/status`, { action: 'submit_complete' });
+      alert('已提交完成，等待发单人验收');
+      fetchOrderDetail();
+    } catch (err) {
+      alert('操作失败：' + (err.response?.data?.detail || err.message));
     }
   };
 
@@ -227,6 +258,18 @@ const OrderDetail = () => {
             </div>
           </div>
 
+          {order.abnormalReason && (
+            <div className="detail-section">
+              <h2 className="section-title">异常信息</h2>
+              <div className="info-list">
+                <div className="info-item-full">
+                  <span className="info-label">异常原因</span>
+                  <span className="info-value" style={{ color: '#d97706' }}>{order.abnormalReason}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {(order.userComment || order.handlerComment) && (
             <div className="detail-section">
               <h2 className="section-title">评价信息</h2>
@@ -250,14 +293,28 @@ const OrderDetail = () => {
               </div>
             </div>
           )}
+
+          <div className="detail-section chat-section">
+            <ChatPanel 
+              orderId={parseInt(orderId)} 
+              handlerId={order.handlerId} 
+              userId={order.userId} 
+            />
+          </div>
         </div>
 
         <div className="detail-actions">
-          {order.status === 'pending' && (
+          {是发单人(order) && order.status === 'pending' && (
             <button onClick={handleCancelOrder} className="cancel-btn">取消订单</button>
           )}
-          {(order.status === 'review' || order.status === 'in_progress') && (
+          {是发单人(order) && order.status === 'review' && (
             <button onClick={handleConfirmComplete} className="confirm-btn">确认完成</button>
+          )}
+          {是接单人(order) && order.status === 'accepted' && (
+            <button onClick={handleStartOrder} className="confirm-btn">开始执行</button>
+          )}
+          {是接单人(order) && order.status === 'in_progress' && (
+            <button onClick={handleSubmitComplete} className="confirm-btn">提交完成</button>
           )}
         </div>
       </div>

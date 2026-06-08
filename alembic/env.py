@@ -4,20 +4,21 @@ from alembic import context
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[0]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.core.config import settings
-from app.db.session import Base
-from app.models import user, game, order, message
+from app.核心.配置 import 配置对象
+from app.数据库.会话 import 数据库基类
+from app.模型 import 用户, 游戏, 订单, 消息, 订单项目
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = Base.metadata
+target_metadata = 数据库基类.metadata
 
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+sync_url = 配置对象.数据库连接字符串.replace("+aiomysql", "+pymysql")
+config.set_main_option("sqlalchemy.url", sync_url)
 
 
 def run_migrations_offline() -> None:

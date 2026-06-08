@@ -66,6 +66,7 @@
 .status-completed { background: #d1fae5; color: #065f46; border-color: #6ee7b7; }
 .status-cancelled { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
 .status-disputed { background: #ffedd5; color: #9a3412; border-color: #fdba74; }
+.status-abnormal { background: #ffedd5; color: #9a3412; border-color: #fde68a; }
 
 .detail-grid {
   display: flex;

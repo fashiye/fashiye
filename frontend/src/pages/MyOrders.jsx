@@ -11,6 +11,10 @@ const MyOrders = () => {
   const [page, setPage] = useState(1);
   const [userRole, setUserRole] = useState('');
 
+  const [异常弹窗, set异常弹窗] = useState(false);
+  const [异常订单编号, set异常订单编号] = useState(null);
+  const [异常原因, set异常原因] = useState('');
+
   const fetchOrders = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -39,8 +43,10 @@ const MyOrders = () => {
       'pending': '待接单',
       'pending_review': '待审核',
       'accepted': '进行中',
+      'in_progress': '进行中',
       'completed': '已完成',
-      'cancelled': '已取消'
+      'cancelled': '已取消',
+      'abnormal': '异常'
     };
     return statusMap[status] || status;
   };
@@ -50,8 +56,10 @@ const MyOrders = () => {
       'pending': 'status-pending',
       'pending_review': 'status-pending-review',
       'accepted': 'status-accepted',
+      'in_progress': 'status-accepted',
       'completed': 'status-completed',
-      'cancelled': 'status-cancelled'
+      'cancelled': 'status-cancelled',
+      'abnormal': 'status-abnormal'
     };
     return classMap[status] || '';
   };
@@ -134,6 +142,34 @@ const MyOrders = () => {
     }
   };
 
+  const handleReportAbnormal = (orderId) => {
+    set异常订单编号(orderId);
+    set异常原因('');
+    set异常弹窗(true);
+  };
+
+  const handleSubmitAbnormal = async () => {
+    if (!异常原因.trim()) {
+      alert('请输入异常原因');
+      return;
+    }
+
+    try {
+      await api.post(`/orders/${异常订单编号}/status`, {
+        action: 'report_abnormal',
+        remark: 异常原因.trim()
+      });
+
+      alert('已提交异常报告');
+      set异常弹窗(false);
+      set异常订单编号(null);
+      set异常原因('');
+      fetchOrders();
+    } catch (err) {
+      alert('操作失败：' + (err.response?.data?.detail || err.message));
+    }
+  };
+
   return (
     <div className="my-orders-container">
       <div className="my-orders-content">
@@ -154,9 +190,10 @@ const MyOrders = () => {
             >
               <option value="">全部状态</option>
               <option value="pending">待接单</option>
-              <option value="accepted">进行中</option>
+              <option value="in_progress">进行中</option>
               <option value="completed">已完成</option>
               <option value="cancelled">已取消</option>
+              <option value="abnormal">异常</option>
             </select>
           </div>
         </div>
@@ -246,6 +283,14 @@ const MyOrders = () => {
                       提交完成
                     </button>
                   )}
+                  {userRole === 'handler' && order.status === 'in_progress' && (
+                    <button
+                      onClick={() => handleReportAbnormal(order.id)}
+                      className="abnormal-btn"
+                    >
+                      提交异常
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -270,6 +315,26 @@ const MyOrders = () => {
           </button>
         </div>
       </div>
+
+      {异常弹窗 && (
+        <div className="modal-overlay" onClick={() => set异常弹窗(false)}>
+          <div className="abnormal-modal" onClick={e => e.stopPropagation()}>
+            <h3 className="modal-title">提交异常报告</h3>
+            <p className="modal-desc">请描述订单执行过程中遇到的问题：</p>
+            <textarea
+              className="modal-textarea"
+              value={异常原因}
+              onChange={e => set异常原因(e.target.value)}
+              placeholder="请输入异常原因..."
+              rows={4}
+            />
+            <div className="modal-actions">
+              <button className="modal-btn cancel" onClick={() => set异常弹窗(false)}>取消</button>
+              <button className="modal-btn confirm abnormal" onClick={handleSubmitAbnormal}>提交异常</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

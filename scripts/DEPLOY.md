@@ -53,7 +53,7 @@ SECRET_KEY=your_secret_key_here
 ### 4. 构建前端
 
 ```bash
-cd frontend
+cd 叶狼游戏代肝
 npm install
 npm run build
 cd ..
@@ -211,7 +211,7 @@ sudo nginx -t
 
 3. 检查前端文件:
 ```bash
-ls -la /opt/fashiye/frontend/dist/
+ls -la /opt/fashiye/叶狼游戏代肝/dist/
 ```
 
 ## 目录结构
@@ -219,7 +219,7 @@ ls -la /opt/fashiye/frontend/dist/
 ```
 /opt/fashiye/
 ├── app/                 # 后端应用
-├── frontend/
+├── 叶狼游戏代肝/
 │   └── dist/           # 前端构建文件
 ├── scripts/            # 管理脚本
 ├── .env                # 环境变量
