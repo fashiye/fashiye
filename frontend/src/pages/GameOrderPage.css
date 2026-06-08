@@ -286,3 +286,92 @@
 .back-btn:hover {
   background: #f0f0ff;
 }
+
+/* ========== 手机端自适应 ========== */
+@media (max-width: 640px) {
+  .game-order-container {
+    padding: 8px;
+    align-items: flex-start;
+    padding-top: 16px;
+  }
+
+  .order-form, .success-container {
+    padding: 20px 16px;
+    border-radius: 12px;
+  }
+
+  .title {
+    font-size: 22px;
+    margin-bottom: 20px;
+  }
+
+  .item-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .item-select {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  .quantity-input {
+    flex: 0 0 80px;
+    text-align: center;
+  }
+
+  .price-display {
+    flex: 1;
+    min-width: 0;
+    text-align: right;
+    font-size: 14px;
+  }
+
+  .remove-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .total-section {
+    flex-direction: column;
+    gap: 4px;
+    padding: 16px;
+  }
+
+  .total-amount {
+    font-size: 20px;
+  }
+
+  .form-control {
+    font-size: 14px;
+    padding: 10px 12px;
+  }
+
+  .submit-btn {
+    padding: 14px;
+    font-size: 16px;
+  }
+
+  /* 成功页手机适配 */
+  .order-no {
+    font-size: 18px;
+  }
+
+  .tips {
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .success-icon {
+    width: 72px;
+    height: 72px;
+    font-size: 36px;
+  }
+
+  .order-info {
+    padding: 16px;
+    gap: 16px;
+  }
+}
