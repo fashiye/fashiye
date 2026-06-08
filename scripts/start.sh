@@ -12,6 +12,9 @@ GUNICORN_BIND=${GUNICORN_BIND:-"0.0.0.0:8888"}
 
 mkdir -p "$LOG_DIR"
 
+# 激活虚拟环境，gunicorn/uvicorn 均安装在其中
+source "$APP_DIR/venv/bin/activate"
+
 exec gunicorn app.主程序:app \
     --worker-class uvicorn.workers.UvicornWorker \
     --workers "$GUNICORN_WORKERS" \
