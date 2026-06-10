@@ -18,7 +18,7 @@ const DatabaseAdmin = () => {
 
   const fetchTables = async () => {
     try {
-      const response = await api.get('/admin/database/tables');
+      const response = await api.get('/database/tables');
       setTables(response.data);
     } catch (err) {
       console.error('获取表列表失败:', err);
@@ -34,7 +34,7 @@ const DatabaseAdmin = () => {
     
     try {      
       // 获取表数据
-      const dataResponse = await api.get(`/admin/database/tables/${tableName}/data`, {
+      const dataResponse = await api.get(`/database/tables/${tableName}/data`, {
         params: {
           page: 1,
             page_size: 50
@@ -77,7 +77,7 @@ const DatabaseAdmin = () => {
     
     try {
       await api.put(
-        `/admin/database/tables/${activeTable}/data/${primaryKeyValue}`,
+        `/database/tables/${activeTable}/data/${primaryKeyValue}`,
         { data: row }
       );
       
@@ -104,7 +104,7 @@ const DatabaseAdmin = () => {
     }
     
     try {
-      await api.delete(`/admin/database/tables/${activeTable}/data/${primaryKeyValue}`);
+      await api.delete(`/database/tables/${activeTable}/data/${primaryKeyValue}`);
       
       // 从本地数据中移除
       const newData = [...tableData];
@@ -131,7 +131,7 @@ const DatabaseAdmin = () => {
     
     try {
       const response = await api.post(
-        `/admin/database/tables/${activeTable}/data`,
+        `/database/tables/${activeTable}/data`,
         { data: newRow }
       );
       

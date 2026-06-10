@@ -36,7 +36,10 @@ async def 获取当前用户(
     if not 载荷:
         raise 认证错误("无效的认证凭据")
 
-    用户ID: int = 载荷.get("sub")
+    # 传入：JWT 载荷字典
+    # 作用：提取 sub（用户ID，python-jose 要求 sub 为字符串，须转 int）和 role
+    # 传出：用户ID（int）和角色（str）
+    用户ID: int = int(载荷.get("sub"))
     角色: str = 载荷.get("role")
 
     if 用户ID is None or 角色 is None:

@@ -7,7 +7,8 @@ const CreateOrder = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     gameId: '',
-    accountInfo: '',
+    accountName: '',
+    accountPassword: '',
     requirements: ''
   });
   const [items, setItems] = useState([
@@ -96,13 +97,21 @@ const CreateOrder = () => {
       setError('请至少选择一个项目');
       return;
     }
-    
+
+    if (!formData.accountName.trim() || !formData.accountPassword.trim()) {
+      setError('请填写游戏账号和密码（注意区分大小写）');
+      return;
+    }
+
     setIsLoading(true);
+
+    // 后端统一加密存储，前端提交时合并为 "账号:密码" 格式
+    const 合并账号信息 = `${formData.accountName}:${formData.accountPassword}`;
 
     try {
       const orderData = {
         gameId: parseInt(formData.gameId),
-        accountInfo: formData.accountInfo,
+        accountInfo: 合并账号信息,
         requirements: formData.requirements,
         items: validItems.map(item => ({
           projectId: parseInt(item.projectId),
@@ -241,14 +250,26 @@ const CreateOrder = () => {
             <h2>账号信息</h2>
             
             <div className="form-group">
-              <label>游戏账号信息 *</label>
-              <textarea
-                value={formData.accountInfo}
-                onChange={(e) => setFormData(prev => ({ ...prev, accountInfo: e.target.value }))}
+              <label>游戏账号 *</label>
+              <input
+                type="text"
+                value={formData.accountName}
+                onChange={(e) => setFormData(prev => ({ ...prev, accountName: e.target.value }))}
                 required
                 disabled={isLoading}
-                placeholder="请输入游戏账号、密码、服务器等信息..."
-                rows="4"
+                placeholder="请输入游戏账号（注意区分大小写）"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>游戏密码 *</label>
+              <input
+                type="text"
+                value={formData.accountPassword}
+                onChange={(e) => setFormData(prev => ({ ...prev, accountPassword: e.target.value }))}
+                required
+                disabled={isLoading}
+                placeholder="请输入游戏密码（注意区分大小写）"
               />
             </div>
           </div>

@@ -19,11 +19,19 @@ class 消息响应(BaseModel):
     contentType: str
     attachment: Optional[str] = None
     orderId: Optional[int] = None
-    status: str
+    status: Optional[str] = None
     createdAt: str
 
     class Config:
         from_attributes = True
+
+
+class 会话创建请求(BaseModel):
+    """创建会话的请求体"""
+    otherPartyType: str
+    otherPartyId: int
+    type: str = "user_handler"
+    orderId: Optional[int] = None
 
 
 class 会话响应(BaseModel):

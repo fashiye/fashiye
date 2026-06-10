@@ -1,0 +1,457 @@
+.payment-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+.payment-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.payment-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.payment-header h1 {
+  margin: 0;
+  font-size: 20px;
+  color: #111827;
+}
+
+.back-btn {
+  background: #f3f4f6;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: #374151;
+  font-size: 14px;
+}
+
+.back-btn:hover {
+  background: #e5e7eb;
+}
+
+/* 订单摘要 */
+.order-summary {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.summary-row + .summary-row {
+  border-top: 1px solid #e5e7eb;
+}
+
+.summary-label {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.summary-value {
+  color: #111827;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.summary-value.order-no {
+  font-family: monospace;
+  color: #6366f1;
+}
+
+.total-row .price {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ef4444;
+}
+
+/* 支付方式 */
+.section-title {
+  font-size: 16px;
+  color: #111827;
+  margin: 0 0 12px;
+}
+
+.section-desc {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: -8px 0 12px;
+}
+
+.payment-methods {
+  margin-bottom: 24px;
+}
+
+.method-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.method-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.method-option:hover {
+  border-color: #818cf8;
+  background: #f5f3ff;
+}
+
+.method-option.selected {
+  border-color: #6366f1;
+  background: #eef2ff;
+}
+
+.method-option input {
+  display: none;
+}
+
+.method-icon {
+  font-size: 24px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f3f4f6;
+  border-radius: 8px;
+}
+
+.method-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #111827;
+}
+
+/* 联系方式 */
+.contact-section {
+  margin-bottom: 24px;
+}
+
+.contact-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.contact-input:focus {
+  border-color: #6366f1;
+}
+
+.contact-input::placeholder {
+  color: #9ca3af;
+}
+
+/* 错误提示 */
+.payment-error {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+/* 操作按钮 */
+.payment-actions {
+  margin-bottom: 24px;
+}
+
+.pay-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pay-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.pay-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.pay-btn.loading {
+  background: linear-gradient(135deg, #9ca3af, #6b7280);
+}
+
+.back-to-order-btn {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.back-to-order-btn:hover {
+  background: #e5e7eb;
+}
+
+.cannot-pay-notice {
+  text-align: center;
+  padding: 14px;
+  background: #fef3c7;
+  color: #92400e;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+/* 支付提示 */
+/* ========== 二维码弹窗样式 ========== */
+.qr-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.qr-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.qr-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 20px 0;
+  position: relative;
+}
+
+.qr-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #111827;
+}
+
+.qr-method-badge {
+  font-size: 12px;
+  background: #eef2ff;
+  color: #6366f1;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.qr-close-btn {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  background: #f3f4f6;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 16px;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.qr-close-btn:hover {
+  background: #e5e7eb;
+  color: #111827;
+}
+
+.qr-body {
+  padding: 20px;
+  text-align: center;
+}
+
+.qr-amount {
+  font-size: 16px;
+  color: #374151;
+  margin: 0 0 4px;
+}
+
+.qr-amount strong {
+  font-size: 24px;
+  color: #ef4444;
+  margin-left: 4px;
+}
+
+.qr-tip {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 20px;
+}
+
+.qr-code-container {
+  width: 260px;
+  height: 260px;
+  margin: 0 auto;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  padding: 8px;
+}
+
+.qr-code-container canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.qr-hint {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 10px 0 0;
+}
+
+.qr-status-text {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 8px 0 0;
+}
+
+.qr-footer {
+  display: flex;
+  gap: 12px;
+  padding: 0 20px 20px;
+}
+
+.qr-paid-btn {
+  flex: 1;
+  padding: 12px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.qr-paid-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.qr-cancel-btn {
+  flex: 1;
+  padding: 12px;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.qr-cancel-btn:hover {
+  background: #e5e7eb;
+}
+
+/* ========== 支付说明 ========== */
+.payment-tips {
+  background: #f0fdf4;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.payment-tips h3 {
+  font-size: 14px;
+  color: #166534;
+  margin: 0 0 8px;
+}
+
+.payment-tips ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.payment-tips li {
+  font-size: 13px;
+  color: #15803d;
+  line-height: 1.8;
+}
+
+/* 加载/错误 */
+.loading-state,
+.error-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.error-state p {
+  color: #dc2626;
+  margin-bottom: 16px;
+}

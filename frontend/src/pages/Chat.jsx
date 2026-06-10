@@ -26,9 +26,9 @@ const Chat = () => {
     setIsLoading(true);
     try {
       const response = await api.get(`/conversations/${conversationId}/messages`);
-      setMessages(response.data);
+      setMessages(response.data.data);
       // 获取消息后自动标记已读
-      const messages数据 = response.data;
+      const messages数据 = response.data.data;
       if (messages数据.length > 0) {
         const 最后消息id = messages数据[messages数据.length - 1].id;
         await api.post(`/conversations/${conversationId}/read`, {
@@ -46,7 +46,7 @@ const Chat = () => {
     if (!/^\d+$/.test(conversationId)) return;
     try {
       const response = await api.get('/conversations');
-      const conv = response.data.find(c => c.id === parseInt(conversationId));
+      const conv = response.data.data.find(c => c.id === parseInt(conversationId));
       if (conv) {
         setConversation(conv);
       }
@@ -69,7 +69,7 @@ const Chat = () => {
     setIsLoadingUsers(true);
     try {
       const response = await api.get('/users/available');
-      setAvailableUsers(response.data);
+      setAvailableUsers(response.data.data);
     } catch (err) {
       console.error('获取用户列表失败:', err);
     } finally {
@@ -81,7 +81,7 @@ const Chat = () => {
     try {
       const response = await api.post('/conversations', { otherPartyType, otherPartyId, type: 'user_handler' });
       const role = localStorage.getItem('role') || 'user';
-      navigate(`/${role}/messages/${response.data.id}`);
+      navigate(`/${role}/messages/${response.data.data.id}`);
     } catch (err) {
       console.error('创建会话失败:', err);
       alert(err.response?.data?.detail || '创建会话失败');
@@ -104,7 +104,16 @@ const Chat = () => {
     try {
       const response = await api.post(`/conversations/${conversationId}/messages`, { content: newMessage, contentType: 'text' });
       
-      setMessages(prev => [...prev, response.data]);
+      // 本地构造消息对象，后端只返回 messageId
+      const 新消息 = {
+        id: response.data.data.messageId,
+        senderId: parseInt(localStorage.getItem('userId') || '0'),
+        senderType: localStorage.getItem('role') || 'user',
+        content: newMessage,
+        contentType: 'text',
+        createdAt: new Date().toISOString()
+      };
+      setMessages(prev => [...prev, 新消息]);
       setNewMessage('');
       setAutoScroll(true);
     } catch (err) {
@@ -126,12 +135,13 @@ const Chat = () => {
     setAutoScroll(isNearBottom);
   };
 
+  // 格式化时间，显示年月日时分
   const formatTime = (timeStr) => {
     if (!timeStr) return '';
-    const date = new Date(timeStr);
-    return date.toLocaleTimeString('zh-CN', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
+    const 时间对象 = new Date(timeStr);
+    return 时间对象.toLocaleString('zh-CN', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
     });
   };
 

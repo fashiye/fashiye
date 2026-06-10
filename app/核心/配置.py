@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     邮件SMTP密码: str = Field(alias="SMTP_PASSWORD")
     邮件发送者地址: str = Field(alias="SMTP_FROM")
 
+    # iaitouzi 支付平台设置（MD5签名+表单跳转支付）
+    iaitouzi应用ID: str = Field("2258", alias="IAITOUZI_APP_ID")
+    iaitouzi应用密钥: str = Field(alias="IAITOUZI_APP_SECRET")
+    iaitouzi支付网关地址: str = Field("https://iaitouzi.com/core/api/request/pay/", alias="IAITOUZI_BASE_URL")
+    iaitouzi异步通知地址: str = Field("http://localhost:8002/api/v1/payment/callback", alias="IAITOUZI_NOTIFY_URL")
+
     # 日志记录设置
     日志级别: str = Field("INFO", alias="LOG_LEVEL")
     日志目录: str = Field("logs", alias="LOG_DIR")

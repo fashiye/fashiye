@@ -3,3 +3,4 @@ from app.模型.游戏 import 游戏表, 项目表
 from app.模型.订单 import 订单表, 订单操作日志表, 订单状态枚举
 from app.模型.订单项目 import 订单项目表
 from app.模型.消息 import 会话表, 消息表, 消息阅读状态表
+from app.模型.支付 import 支付记录表

@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
-from typing import Optional
+from typing import Optional, List
 
 from app.数据库.会话 import 获取数据库会话
 from app.api.依赖.认证 import 获取当前用户, 要求角色
@@ -10,6 +10,65 @@ from app.模型.用户 import 用户表, 打手表, 管理员表
 from app.核心.异常 import 业务逻辑错误
 
 router = APIRouter()
+
+
+@router.get("/users/available")
+async def 获取可聊天用户接口(
+    角色过滤: Optional[str] = Query(None, description="筛选角色: user/handler"),
+    数据库: AsyncSession = Depends(获取数据库会话),
+    当前用户信息: tuple = Depends(获取当前用户)
+):
+    """获取当前用户可以发起聊天的用户列表"""
+    当前用户, 当前角色 = 当前用户信息
+
+    可用列表: List[dict] = []
+
+    if 当前角色 == "user":
+        # 用户可以看到所有打手
+        打手查询 = select(打手表).where(打手表.状态 == 1, 打手表.审核状态 == "approved")
+        打手结果 = await 数据库.execute(打手查询)
+        打手列表 = 打手结果.scalars().all()
+        for 打手 in 打手列表:
+            可用列表.append({
+                "id": 打手.id,
+                "username": 打手.用户名,
+                "role": "handler",
+            })
+    elif 当前角色 == "handler":
+        用户查询 = select(用户表).where(用户表.状态 == 1)
+        用户结果 = await 数据库.execute(用户查询)
+        用户列表 = 用户结果.scalars().all()
+        for 用户 in 用户列表:
+            可用列表.append({
+                "id": 用户.id,
+                "username": 用户.用户名,
+                "role": "user",
+            })
+    elif 当前角色 in ["super", "operator"]:
+        # 管理员可以看到所有用户和打手
+        用户查询 = select(用户表).where(用户表.状态 == 1)
+        用户结果 = await 数据库.execute(用户查询)
+        用户列表 = 用户结果.scalars().all()
+        for 用户 in 用户列表:
+            可用列表.append({
+                "id": 用户.id,
+                "username": 用户.用户名,
+                "role": "user",
+            })
+        打手查询 = select(打手表).where(打手表.状态 == 1)
+        打手结果 = await 数据库.execute(打手查询)
+        打手列表 = 打手结果.scalars().all()
+        for 打手 in 打手列表:
+            可用列表.append({
+                "id": 打手.id,
+                "username": 打手.用户名,
+                "role": "handler",
+            })
+
+    if 角色过滤:
+        可用列表 = [u for u in 可用列表 if u["role"] == 角色过滤]
+
+    return {"code": 0, "data": 可用列表, "message": "获取成功"}
 
 
 @router.get("/users/me")
@@ -93,16 +152,16 @@ async def 修改密码接口(
     return {"code": 0, "data": None, "message": "密码修改成功"}
 
 
-@router.get("/users/{用户ID}")
+@router.get("/users/{user_id}")
 async def 获取指定用户信息接口(
-    用户ID: int,
+    user_id: int,
     数据库: AsyncSession = Depends(获取数据库会话),
     当前用户信息: tuple = Depends(获取当前用户)
 ):
     """获取指定用户的信息（管理员权限）"""
     当前用户, 当前角色 = 当前用户信息
 
-    用户结果 = await 数据库.execute(select(用户表).where(用户表.id == 用户ID))
+    用户结果 = await 数据库.execute(select(用户表).where(用户表.id == user_id))
     用户 = 用户结果.scalar_one_or_none()
     if 用户:
         return {
@@ -119,7 +178,7 @@ async def 获取指定用户信息接口(
             "message": "获取用户信息成功"
         }
 
-    打手结果 = await 数据库.execute(select(打手表).where(打手表.id == 用户ID))
+    打手结果 = await 数据库.execute(select(打手表).where(打手表.id == user_id))
     打手 = 打手结果.scalar_one_or_none()
     if 打手:
         return {
@@ -140,14 +199,14 @@ async def 获取指定用户信息接口(
     raise HTTPException(status_code=404, detail="用户不存在")
 
 
-@router.get("/handler/{打手ID}/profile")
+@router.get("/handler/{handler_id}/profile")
 async def 获取打手公开资料接口(
-    打手ID: int,
+    handler_id: int,
     数据库: AsyncSession = Depends(获取数据库会话)
 ):
     """获取打手的公开资料（无需登录）"""
     打手结果 = await 数据库.execute(
-        select(打手表).where(打手表.id == 打手ID)
+        select(打手表).where(打手表.id == handler_id)
     )
     打手 = 打手结果.scalar_one_or_none()
     if not 打手:

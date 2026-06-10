@@ -66,7 +66,7 @@ async def 注册接口(
             用户名=注册数据.username,
             邮箱=注册数据.email,
             密码哈希=生成密码哈希(注册数据.password),
-            角色=注册数据.role
+            角色="operator"
         )
     else:
         raise 业务逻辑错误("无效的角色类型")
@@ -113,7 +113,10 @@ async def 登录接口(
 
     访问令牌过期时间 = timedelta(minutes=配置对象.访问令牌过期分钟数)
     访问令牌 = 创建访问令牌(
-        待编码数据={"sub": 用户.id, "role": 实际角色},
+        # 传入：用户ID（转字符串）和实际角色
+        # 作用：生成 JWT 访问令牌，python-jose 要求 sub 为字符串类型
+        # 传出：JWT 令牌字符串
+        待编码数据={"sub": str(用户.id), "role": 实际角色},
         过期时间差=访问令牌过期时间
     )
 

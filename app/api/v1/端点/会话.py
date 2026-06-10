@@ -6,7 +6,7 @@ from typing import Optional
 from app.数据库.会话 import 获取数据库会话
 from app.api.依赖.认证 import 获取当前用户
 from app.服务.消息服务 import 消息服务
-from app.模式.消息 import 消息创建, 消息响应, 会话响应, 标记已读请求
+from app.模式.消息 import 消息创建, 消息响应, 会话响应, 会话创建请求, 标记已读请求
 from app.模型.消息 import 会话表, 消息表, 消息阅读状态表
 from app.模型.用户 import 用户表, 打手表
 from app.核心.异常 import 业务逻辑错误
@@ -60,9 +60,35 @@ async def 获取会话列表接口(
     return {"code": 0, "data": 结果列表, "message": "获取会话列表成功"}
 
 
-@router.get("/conversations/{会话ID}/messages")
+@router.post("/conversations")
+async def 创建会话接口(
+    创建数据: 会话创建请求,
+    数据库: AsyncSession = Depends(获取数据库会话),
+    当前用户信息: tuple = Depends(获取当前用户)
+):
+    """
+    创建新会话或返回已有会话
+    传入：otherPartyType(对方角色), otherPartyId(对方ID), type(会话类型), orderId(可选订单ID)
+    作用：调用消息服务创建或查找已有会话
+    传出：包含会话ID的响应
+    """
+    当前用户, 当前角色 = 当前用户信息
+
+    会话 = await 消息服务.创建会话(
+        数据库,
+        发起方类型=当前角色,
+        发起方ID=当前用户.id,
+        对方类型=创建数据.otherPartyType,
+        对方ID=创建数据.otherPartyId,
+        会话类型=创建数据.type,
+        订单ID=创建数据.orderId,
+    )
+    return {"code": 0, "data": {"id": 会话.id}, "message": "创建会话成功"}
+
+
+@router.get("/conversations/{conversation_id}/messages")
 async def 获取消息列表接口(
-    会话ID: int,
+    conversation_id: int,
     起始消息ID: Optional[int] = Query(None, description="起始消息ID，用于分页加载更早的消息"),
     限制数量: int = Query(20, ge=1, le=100, description="返回消息数量"),
     数据库: AsyncSession = Depends(获取数据库会话),
@@ -71,7 +97,7 @@ async def 获取消息列表接口(
     """获取指定会话的消息记录，支持分页"""
     当前用户, 当前角色 = 当前用户信息
 
-    会话结果 = await 数据库.execute(select(会话表).where(会话表.id == 会话ID))
+    会话结果 = await 数据库.execute(select(会话表).where(会话表.id == conversation_id))
     会话 = 会话结果.scalar_one_or_none()
     if not 会话:
         raise 业务逻辑错误("会话不存在")
@@ -79,14 +105,14 @@ async def 获取消息列表接口(
        not (会话.参与方B类型 == 当前角色 and 会话.参与方BID == 当前用户.id):
         raise 业务逻辑错误("无权访问此会话")
 
-    消息列表 = await 消息服务.获取消息列表(数据库, 会话ID, 起始消息ID, 限制数量)
+    消息列表 = await 消息服务.获取消息列表(数据库, conversation_id, 起始消息ID, 限制数量)
 
     消息响应列表 = [消息响应(
         id=msg.id,
         senderId=msg.发送者ID,
         senderType=msg.发送者类型,
         content=msg.内容,
-        contentType=msg.消息类型,
+        contentType=msg.内容类型,
         attachment=msg.附件,
         orderId=msg.订单ID,
         status=msg.状态,
@@ -96,9 +122,9 @@ async def 获取消息列表接口(
     return {"code": 0, "data": 消息响应列表, "message": "获取消息成功"}
 
 
-@router.post("/conversations/{会话ID}/messages")
+@router.post("/conversations/{conversation_id}/messages")
 async def 发送消息接口(
-    会话ID: int,
+    conversation_id: int,
     消息数据: 消息创建,
     数据库: AsyncSession = Depends(获取数据库会话),
     当前用户信息: tuple = Depends(获取当前用户)
@@ -106,7 +132,7 @@ async def 发送消息接口(
     """在指定会话中发送消息"""
     当前用户, 当前角色 = 当前用户信息
 
-    会话结果 = await 数据库.execute(select(会话表).where(会话表.id == 会话ID))
+    会话结果 = await 数据库.execute(select(会话表).where(会话表.id == conversation_id))
     会话 = 会话结果.scalar_one_or_none()
     if not 会话:
         raise 业务逻辑错误("会话不存在")
@@ -115,14 +141,14 @@ async def 发送消息接口(
         raise 业务逻辑错误("无权访问此会话")
 
     消息 = await 消息服务.发送消息(
-        数据库, 会话ID, 当前角色, 当前用户.id, 消息数据
+        数据库, conversation_id, 当前角色, 当前用户.id, 消息数据
     )
     return {"code": 0, "data": {"messageId": 消息.id}, "message": "消息发送成功"}
 
 
-@router.post("/conversations/{会话ID}/read")
+@router.post("/conversations/{conversation_id}/read")
 async def 标记已读接口(
-    会话ID: int,
+    conversation_id: int,
     已读数据: 标记已读请求,
     数据库: AsyncSession = Depends(获取数据库会话),
     当前用户信息: tuple = Depends(获取当前用户)
@@ -130,7 +156,7 @@ async def 标记已读接口(
     """标记会话中指定消息之前的消息为已读"""
     当前用户, 当前角色 = 当前用户信息
     await 消息服务.标记已读(
-        数据库, 会话ID, 当前角色, 当前用户.id,
+        数据库, conversation_id, 当前角色, 当前用户.id,
         已读数据.last_read_message_id
     )
     return {"code": 0, "data": None, "message": "标记已读成功"}

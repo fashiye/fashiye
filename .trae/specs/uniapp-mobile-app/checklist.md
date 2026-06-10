@@ -1,0 +1,28 @@
+# UniApp 原生 APP 开发 - Verification Checklist
+
+- [x] 项目初始化完成：`app-mobile/` 目录存在，使用 Vue3 + TypeScript + Vite
+- [x] `manifest.json` 和 `pages.json` 配置正确
+- [x] API 请求层实现：`request.ts`、`auth.ts`、`orders.ts`、`conversations.ts`、`games.ts`、`users.ts`
+- [x] Token 管理正确：使用 `uni.getStorageSync`/`uni.setStorageSync`，401 时清除 Token 并跳转登录
+- [x] 登录页完成：角色选择器（仅玩家/打手），邮箱密码输入，登录按钮，错误提示
+- [x] 注册页完成：邮箱验证码，60s 倒计时，密码强度校验，打手注册提示
+- [x] 忘记密码与重置密码页完成
+- [x] 底部 Tab 导航配置正确：首页/订单/消息/我的
+- [x] 首页完成：根据角色（玩家/打手）动态展示不同内容
+- [x] 我的页面完成：用户信息展示，退出登录功能
+- [x] 路由守卫完成：未登录时跳转登录
+- [x] 订单列表页完成：状态筛选 Tab，下拉刷新，上拉加载更多
+- [x] 订单详情页完成：信息展示，操作按钮（根据角色/状态显示）
+- [x] `OrderCard.vue` 和 `StatusBadge.vue` 组件完成
+- [x] 玩家创建订单页完成：游戏选择、项目选择、账号信息、要求、金额计算
+- [x] 打手订单池页完成：游戏筛选、订单列表、接单功能
+- [x] 消息模块完成：消息列表、聊天页、发送消息、未读数展示
+- [x] 新建会话功能完成：调用 `/users/available` 获取可聊天用户
+- [x] 订单评价功能完成（在订单详情页）
+- [x] 账户管理页框架完成（可选功能）
+- [x] 整体 UI 符合移动端设计规范
+- [x] 所有功能在 iOS 和 Android 真机上正常运行
+- [x] 错误和异常状态有友好提示
+- [x] 加载状态、空状态展示正确
+- [x] 与后端 API 完全兼容，共享数据
+- [x] `LoadingSpinner.vue` 和 `EmptyState.vue` 通用组件完成

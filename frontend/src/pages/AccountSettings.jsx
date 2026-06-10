@@ -25,7 +25,7 @@ const AccountSettings = () => {
   useEffect(() => {
     const 获取用户信息 = async () => {
       try {
-        const res = await api.get('/auth/me');
+        const res = await api.get('/users/me');
         set用户信息(res.data);
         set新昵称(res.data.username);
       } catch {
@@ -50,7 +50,7 @@ const AccountSettings = () => {
     if (昵称提交中) return;
     set昵称提交中(true);
     try {
-      const res = await api.put('/auth/profile', { username: 新昵称.trim() });
+      const res = await api.put('/users/profile', { username: 新昵称.trim() });
       set用户信息(res.data);
       显示提示('success', '昵称修改成功');
       set昵称弹窗(false);
@@ -78,7 +78,7 @@ const AccountSettings = () => {
     if (密码提交中) return;
     set密码提交中(true);
     try {
-      await api.post('/auth/change-password', { old_password: 旧密码, new_password: 新密码 });
+      await api.post('/users/change-password', { old_password: 旧密码, new_password: 新密码 });
       显示提示('success', '密码修改成功');
       set密码弹窗(false);
       set旧密码('');

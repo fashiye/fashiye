@@ -45,7 +45,7 @@ class 消息阅读状态表(数据库基类):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     会话ID = Column("conversation_id", Integer, ForeignKey("conversations.id"), nullable=False, comment="会话 ID")
-    参与方类型 = Column("party_type", String(20), nullable=False, comment="参与方角色类型: user/handler/admin")
-    参与方ID = Column("party_id", Integer, nullable=False, comment="参与方的用户/打手/管理员 ID")
+    参与方类型 = Column("participant_type", String(20), nullable=False, comment="参与方角色类型: user/handler/admin")
+    参与方ID = Column("participant_id", Integer, nullable=False, comment="参与方的用户/打手/管理员 ID")
     最后阅读消息ID = Column("last_read_message_id", Integer, ForeignKey("messages.id"), nullable=False, comment="最后一条已读消息的 ID")
-    阅读时间 = Column("read_at", DateTime, default=datetime.now, comment="阅读时间")
+    阅读时间 = Column("updated_at", DateTime, default=datetime.now, comment="阅读时间")

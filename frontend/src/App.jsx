@@ -13,6 +13,7 @@ import AdminHandlers from './pages/AdminHandlers';
 import AdminAdmins from './pages/AdminAdmins';
 import AdminOrders from './pages/AdminOrders';
 import AdminGames from './pages/AdminGames';
+import AdminGameProjects from './pages/AdminGameProjects';
 import CreateOrder from './pages/CreateOrder';
 import OrderPool from './pages/OrderPool';
 import MyOrders from './pages/MyOrders';
@@ -24,6 +25,7 @@ import DatabaseAdmin from './pages/DatabaseAdmin';
 import AccountSettings from './pages/AccountSettings';
 import GameOrderPage from './pages/GameOrderPage';
 import OrderLookup from './pages/OrderLookup';
+import PaymentPage from './pages/PaymentPage';
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('token'));
@@ -103,6 +105,11 @@ const App = () => {
               <OrderDetail />
             </ProtectedRoute>
           } 
+        />
+        
+        <Route 
+          path="/payment/:orderId" 
+          element={<PaymentPage />}
         />
         
         <Route 
@@ -254,6 +261,15 @@ const App = () => {
           element={
             <ProtectedRoute requiredRole="operator">
               <AdminGames />
+            </ProtectedRoute>
+          } 
+        />
+        
+        <Route 
+          path="/admin/games/:gameId" 
+          element={
+            <ProtectedRoute requiredRole="operator">
+              <AdminGameProjects />
             </ProtectedRoute>
           } 
         />

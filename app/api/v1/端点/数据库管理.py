@@ -158,16 +158,16 @@ async def 获取所有表列表接口(
         raise HTTPException(status_code=500, detail=f"获取表列表失败: {str(e)}")
 
 
-@router.post("/database/tables/{表名}/data", response_model=表数据响应)
+@router.post("/database/tables/{table_name}/data", response_model=表数据响应)
 async def 查询表数据接口(
-    表名: str,
+    table_name: str,
     查询参数: 表数据查询,
     数据库: AsyncSession = Depends(获取数据库会话),
     当前用户信息: tuple = Depends(要求角色(["super", "operator"]))
 ):
     """分页查询指定表的数据，支持过滤和排序"""
     try:
-        表名 = await 验证表名并检查表是否存在(数据库, 表名)
+        表名 = await 验证表名并检查表是否存在(数据库, table_name)
         偏移量 = (查询参数.page - 1) * 查询参数.page_size
 
         # 获取列信息
@@ -262,16 +262,16 @@ async def 查询表数据接口(
         raise HTTPException(status_code=500, detail=f"查询数据失败: {str(e)}")
 
 
-@router.post("/database/tables/{表名}/data/create", response_model=dict)
+@router.post("/database/tables/{table_name}/data/create", response_model=dict)
 async def 创建表数据接口(
-    表名: str,
+    table_name: str,
     请求数据: 数据创建请求,
     数据库: AsyncSession = Depends(获取数据库会话),
     当前用户信息: tuple = Depends(要求角色(["super", "operator"]))
 ):
     """在指定表中创建新数据行"""
     try:
-        表名 = await 验证表名并检查表是否存在(数据库, 表名)
+        表名 = await 验证表名并检查表是否存在(数据库, table_name)
 
         数据库名结果 = await 数据库.execute(text("SELECT DATABASE()"))
         数据库名 = 数据库名结果.scalar()
@@ -313,17 +313,17 @@ async def 创建表数据接口(
         raise HTTPException(status_code=400, detail=f"创建数据失败: {str(e)}")
 
 
-@router.put("/database/tables/{表名}/data/{行ID}")
+@router.put("/database/tables/{table_name}/data/{row_id}")
 async def 更新表数据接口(
-    表名: str,
-    行ID: int,
+    table_name: str,
+    row_id: int,
     请求数据: 数据更新请求,
     数据库: AsyncSession = Depends(获取数据库会话),
     当前用户信息: tuple = Depends(要求角色(["super", "operator"]))
 ):
     """更新指定表中指定行的数据"""
     try:
-        表名 = await 验证表名并检查表是否存在(数据库, 表名)
+        表名 = await 验证表名并检查表是否存在(数据库, table_name)
 
         数据库名结果 = await 数据库.execute(text("SELECT DATABASE()"))
         数据库名 = 数据库名结果.scalar()
@@ -364,16 +364,16 @@ async def 更新表数据接口(
 
         # 构建UPDATE语句
         set子句 = [f"`{field}` = :{field}" for field in 请求数据.data.keys()]
-        sql = f"UPDATE `{表名}` SET {', '.join(set子句)} WHERE `{主键}` = :行ID"
+        sql = f"UPDATE `{表名}` SET {', '.join(set子句)} WHERE `{主键}` = :row_id"
 
         参数 = 请求数据.data.copy()
-        参数["行ID"] = 行ID
+        参数["row_id"] = row_id
 
         result = await 数据库.execute(text(sql), 参数)
         await 数据库.commit()
 
         if result.rowcount == 0:
-            raise HTTPException(status_code=404, detail=f"ID为 {行ID} 的记录不存在")
+            raise HTTPException(status_code=404, detail=f"ID为 {row_id} 的记录不存在")
 
         return {
             "success": True,
@@ -393,16 +393,16 @@ async def 更新表数据接口(
         raise HTTPException(status_code=500, detail=f"更新数据失败: {str(e)}")
 
 
-@router.delete("/database/tables/{表名}/data/{行ID}")
+@router.delete("/database/tables/{table_name}/data/{row_id}")
 async def 删除表数据接口(
-    表名: str,
-    行ID: int,
+    table_name: str,
+    row_id: int,
     数据库: AsyncSession = Depends(获取数据库会话),
     当前用户信息: tuple = Depends(要求角色(["super"]))
 ):
     """删除指定表中指定行的数据（仅超级管理员可操作）"""
     try:
-        表名 = await 验证表名并检查表是否存在(数据库, 表名)
+        表名 = await 验证表名并检查表是否存在(数据库, table_name)
 
         数据库名结果 = await 数据库.execute(text("SELECT DATABASE()"))
         数据库名 = 数据库名结果.scalar()
@@ -425,13 +425,13 @@ async def 删除表数据接口(
         主键 = pk行[0]
         验证列名格式(主键)
 
-        sql = f"DELETE FROM `{表名}` WHERE `{主键}` = :行ID"
+        sql = f"DELETE FROM `{表名}` WHERE `{主键}` = :row_id"
 
-        result = await 数据库.execute(text(sql), {"行ID": 行ID})
+        result = await 数据库.execute(text(sql), {"row_id": row_id})
         await 数据库.commit()
 
         if result.rowcount == 0:
-            raise HTTPException(status_code=404, detail=f"ID为 {行ID} 的记录不存在")
+            raise HTTPException(status_code=404, detail=f"ID为 {row_id} 的记录不存在")
 
         return {
             "success": True,

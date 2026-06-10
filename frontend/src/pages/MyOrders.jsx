@@ -25,7 +25,11 @@ const MyOrders = () => {
 
       const response = await api.get('/orders/my', { params });
 
-      setOrders(response.data);
+      // 传入：api返回的响应对象
+      // 作用：从后端标准响应中提取data字段（订单列表数组）
+      // 传出：订单列表数组
+      const 订单列表 = response.data?.data ?? response.data ?? [];
+      setOrders(Array.isArray(订单列表) ? 订单列表 : []);
     } catch (err) {
       console.error('获取订单列表失败:', err);
     } finally {
@@ -40,12 +44,14 @@ const MyOrders = () => {
 
   const getStatusText = (status) => {
     const statusMap = {
-      'pending': '待接单',
+      'pending': '待支付',
       'pending_review': '待审核',
-      'accepted': '进行中',
+      'accepted': '已接单',
       'in_progress': '进行中',
+      'review': '验收中',
       'completed': '已完成',
       'cancelled': '已取消',
+      'disputed': '争议中',
       'abnormal': '异常'
     };
     return statusMap[status] || status;
@@ -132,7 +138,7 @@ const MyOrders = () => {
     }
 
     try {
-      await api.post(`/orders/${orderId}/status`, { action: 'submit_complete' });
+      await api.post(`/orders/${orderId}/status`, { action: 'submit_review' });
 
       alert('已提交完成，等待用户验收');
       fetchOrders();
@@ -189,10 +195,14 @@ const MyOrders = () => {
               }}
             >
               <option value="">全部状态</option>
-              <option value="pending">待接单</option>
+              <option value="pending">待支付</option>
+              <option value="pending_review">待审核</option>
+              <option value="accepted">已接单</option>
               <option value="in_progress">进行中</option>
+              <option value="review">验收中</option>
               <option value="completed">已完成</option>
               <option value="cancelled">已取消</option>
+              <option value="disputed">争议中</option>
               <option value="abnormal">异常</option>
             </select>
           </div>

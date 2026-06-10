@@ -89,3 +89,21 @@ class 订单评价(BaseModel):
     role: str = Field(..., pattern="^(user|handler)$")
     rating: int = Field(..., ge=1, le=5)
     comment: Optional[str] = None
+
+
+class 管理员零元测试订单创建(BaseModel):
+    """
+    管理员创建零元测试订单的请求体。
+
+    传入：
+        gameId：游戏ID（必填）
+        accountInfo：账号信息（必填，测试用虚拟账号）
+        requirements：需求描述（可选）
+        items：项目列表（可选，不传时自动添加默认测试项目）
+        备注：管理员备注（可选）
+    """
+    gameId: int = Field(..., description="游戏 ID")
+    accountInfo: str = Field(..., min_length=1, description="测试用账号信息")
+    requirements: Optional[str] = Field(None, description="需求描述")
+    items: Optional[List[订单项目创建]] = Field(None, description="项目列表，不传时自动生成默认测试项目")
+    备注: Optional[str] = Field(None, description="管理员备注")

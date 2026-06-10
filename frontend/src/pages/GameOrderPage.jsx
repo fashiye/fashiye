@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import './GameOrderPage.css';
 
 const GameOrderPage = () => {
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     gameId: '',
-    accountInfo: '',
+    accountName: '',
+    accountPassword: '',
     requirements: ''
   });
   const [items, setItems] = useState([
@@ -99,17 +102,20 @@ const GameOrderPage = () => {
       return;
     }
 
-    if (!formData.accountInfo.trim()) {
-      setError('请填写账号信息');
+    if (!formData.accountName.trim() || !formData.accountPassword.trim()) {
+      setError('请填写游戏账号和密码（注意区分大小写）');
       return;
     }
 
     setIsLoading(true);
     
+    // 后端统一加密存储，前端提交时合并为 "账号:密码" 格式
+    const 合并账号信息 = `${formData.accountName}:${formData.accountPassword}`;
+
     try {
       const response = await api.post('/orders/anonymous', {
         gameId: parseInt(formData.gameId),
-        accountInfo: formData.accountInfo,
+        accountInfo: 合并账号信息,
         requirements: formData.requirements || '',
         items: validItems.map(item => ({
           projectId: parseInt(item.projectId),
@@ -122,7 +128,11 @@ const GameOrderPage = () => {
         orderId: response.data.data.orderId,
         totalAmount: calculateTotal()
       });
-      setStep(2);
+      // 调用库函数：跳转到支付页面，携带订单ID
+      // 传入：路径 /payment/{orderId}
+      // 作用：将用户导航到支付页面，完成后续支付流程
+      // 传出：无返回值
+      navigate(`/payment/${response.data.data.orderId}`, { replace: true });
     } catch (err) {
       setError(err.response?.data?.detail || '下单失败，请重试');
     } finally {
@@ -231,12 +241,24 @@ const GameOrderPage = () => {
             </div>
 
             <div className="form-group">
-              <label>账号信息</label>
-              <textarea
-                value={formData.accountInfo}
-                onChange={(e) => setFormData(prev => ({ ...prev, accountInfo: e.target.value }))}
-                className="form-control textarea"
-                placeholder="请输入游戏账号和密码（我们会加密存储）"
+              <label>游戏账号</label>
+              <input
+                type="text"
+                value={formData.accountName}
+                onChange={(e) => setFormData(prev => ({ ...prev, accountName: e.target.value }))}
+                className="form-control"
+                placeholder="请输入游戏账号（注意区分大小写）"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>游戏密码</label>
+              <input
+                type="text"
+                value={formData.accountPassword}
+                onChange={(e) => setFormData(prev => ({ ...prev, accountPassword: e.target.value }))}
+                className="form-control"
+                placeholder="请输入游戏密码（注意区分大小写）"
               />
             </div>
 

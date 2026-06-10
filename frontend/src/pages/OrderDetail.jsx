@@ -36,11 +36,11 @@ const OrderDetail = () => {
 
   const getStatusText = (status) => {
     const map = {
-      'pending': '待接单',
+      'pending': '待支付',
       'pending_review': '待审核',
       'accepted': '已接单',
       'in_progress': '进行中',
-      'review': '待验收',
+      'review': '验收中',
       'completed': '已完成',
       'cancelled': '已取消',
       'disputed': '争议中',
@@ -304,6 +304,9 @@ const OrderDetail = () => {
         </div>
 
         <div className="detail-actions">
+          {是发单人(order) && (order.status === 'pending' || order.status === 'pending_review') && (
+            <button onClick={() => navigate(`/payment/${orderId}`)} className="pay-btn">去支付</button>
+          )}
           {是发单人(order) && order.status === 'pending' && (
             <button onClick={handleCancelOrder} className="cancel-btn">取消订单</button>
           )}

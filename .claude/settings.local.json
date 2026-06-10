@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p app/核心 app/数据库 app/模型 app/模式 app/接口/v1/端点 app/接口/依赖 app/服务 app/工具)",
+      "Bash(git mv *)",
+      "Bash(xargs sed -i -e 's/from app\\\\.core\\\\.config/from app.核心.配置/g' -e 's/from app\\\\.core\\\\.security/from app.核心.安全/g' -e 's/from app\\\\.core\\\\.crypto/from app.核心.加密/g' -e 's/from app\\\\.core\\\\.exceptions/from app.核心.异常/g' -e 's/from app\\\\.core\\\\.logger/from app.核心.日志/g' -e 's/from app\\\\.db\\\\.session/from app.数据库.会话/g' -e 's/from app\\\\.models\\\\.user/from app.模型.用户/g' -e 's/from app\\\\.models\\\\.game/from app.模型.游戏/g' -e 's/from app\\\\.models\\\\.order_item/from app.模型.订单项目/g' -e 's/from app\\\\.models\\\\.order/from app.模型.订单/g' -e 's/from app\\\\.models\\\\.message/from app.模型.消息/g' -e 's/from app\\\\.models /from app.模型 /g' -e 's/from app\\\\.schemas\\\\.user/from app.模式.用户/g' -e 's/from app\\\\.schemas\\\\.game/from app.模式.游戏/g' -e 's/from app\\\\.schemas\\\\.order/from app.模式.订单/g' -e 's/from app\\\\.schemas\\\\.message/from app.模式.消息/g' -e 's/from app\\\\.schemas\\\\.database/from app.模式.数据库/g')",
+      "Bash(git rm *)",
+      "Bash(rm -rf app/core app/db app/models app/schemas app/services app/utils app/api)"
+    ],
+    "additionalDirectories": [
+      "d:\\code\\fashiye\\app"
+    ]
+  }
+}

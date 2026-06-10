@@ -17,7 +17,7 @@ const AdminOrderReview = () => {
       const response = await api.get('/orders/pending-review', {
         params: { page, size: 20 }
       });
-      setOrders(response.data);
+      setOrders(response.data.data);
     } catch (err) {
       console.error('获取待审核订单失败:', err);
       setError('获取待审核订单失败');

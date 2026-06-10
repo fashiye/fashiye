@@ -1,0 +1,438 @@
+Skip to content
+
+iDataRiver Docs
+Main Navigation
+iDataRiver
+指南
+
+
+
+Sidebar Navigation
+简介
+🏁 什么是iDataRiver?
+
+⚡ 快速开始
+
+💰 积分
+
+🔑 API调用权限
+
+❓ 常见问题
+
+供应商
+入驻必读
+⚡ 快速开始
+
+💵 收款费率
+
+💰 收益提现
+
+💳 收款方式
+
+业务
+🚀 数字商品
+
+🚀 人工交付
+
+🚀 授权码
+
+🚀 付费群组
+
+🚀 VPN
+
+🚀 赞赏项目
+
+🚀 API
+
+进阶
+🤝 代理商
+
+🤖 Telegram机器人
+
+🛠️ 开发者
+
+🌐 独立站
+
+进展
+⚙️ 重要发布历史
+
+文档
+🎯 OpenAI
+
+🎯 隧道代理
+
+🎯 商户开放API
+
+参考
+代理API国家码
+
+翻译API支持语言
+
+异步API对接
+
+历史文章
+
+页面导航
+介绍
+请求方式
+多语言支持
+请求示例
+返回格式
+返回码解释
+接口文档
+商户店铺基础信息
+商户主页信息
+获取订单详情
+创建商品订单
+支付商品订单
+查询商品订单列表
+获取商家订单列表
+获取全部项目
+获取指定项目
+新建项目
+修改项目信息
+删除项目(不可撤销)
+获取单个商品/SKU详情
+新增项目商品/SKU
+更新商品/SKU
+删除商品/SKU
+新增定价计划
+更新定价计划
+删除定价计划
+新增优惠券
+更新优惠券
+删除优惠券
+telegram机器人群发消息
+获取telegram机器人历史群发记录
+查询License授权码
+激活License授权码
+商户开放API
+商户需要先登录到控制台->开发者, 获取商户开发者Secret才能调用本系列API。
+
+介绍
+请求方式
+HOST: https://open.idatariver.com
+Headers: Authorization: Bear Your_Developer_Secret
+多语言支持
+平台支持自动将商户的项目/商品信息翻译为多国语言, 如果需要获取指定语言版本, 只需要在Headers里传递X-Idr-Locale字段。
+
+接口会将自动翻译的结果存放在nameI18n与descI18n字段里。
+
+目前自动翻译包括项目/商品的name和desc字段。
+
+X-Idr-Locale	语言
+en	🇬🇧 English
+fa	🇮🇷 فارسی
+zh-cn	🇨🇳 简体中文
+ja	🇯🇵 日本語
+ru	🇷🇺 Русский
+zh-hk	🇭🇰 繁体中文
+de	🇩🇪 Deutsche
+ar	🇦🇪 العربية
+es	🇪🇸 Español
+fr	🇫🇷 Français
+ko	🇰🇷 한국어
+tr	🇹🇷 Türkçe
+uk	🇺🇦 Українська
+uz	🇺🇿 O'zbekcha
+kk	🇰🇿 Қазақша
+pl	🇵🇱 Polski
+pt	🇵🇹 Português
+pa	🇮🇳 ਪੰਜਾਬੀ
+请求示例
+
+GET请求
+
+POST请求
+shell
+curl https://open.idatariver.com/mapi?key=value \
+  -H "Authorization: Bearer $iDataRiver_Merchant_Secret" \
+  -H "X-Idr-Locale: zh-cn" \
+返回格式
+为了更好的统一管理维护API，API均按照以下字段格式返回
+
+字段名称	描述
+code	(必填)返回码，整数类型，根据此字段判断返回业务状态，详细含义见下方表格
+result	(可选)完整的原始返回结果，其字段结构与解释应由供应商提供
+msg	(可选)请求失败原因
+返回码解释
+code字段的含义与解释
+
+code	描述
+0	请求成功
+1000	内部错误
+1001	参数错误
+1002	请求资源不存在
+1003	内部处理较忙，请稍后重试
+1004	权限不足
+接口文档
+使用场景
+
+开放API分为公开API与私密API，区别如下:
+
+公开API一般是由用户触发调用的，比如下单，查看商家主页的商品信息等，适合放在独立站前端使用。
+
+私密API只应该由商家自己使用，用于访问或管理商户核心数据，适合后端处理商户数据管理。
+
+即便是公开API也不应该 直接 在前端暴露调用方式，以免泄漏商户密钥。
+
+商户店铺基础信息 公开
+返回商户基础信息。
+
+GET /mapi/merchant/basicInfo
+
+商户主页信息 公开
+返回商户项目列表，以及项目下的所有商品信息。
+
+GET /mapi/merchant/info
+
+获取订单详情 公开
+根据订单id获取订单详细信息。
+
+GET /mapi/order/info
+
+字段	类型	是否必填	描述
+id	string	是	订单id
+创建商品订单 公开
+商品下单。
+
+POST /mapi/order/add
+
+字段	类型	是否必填	描述
+projectId	string	是	项目id, 你可以在获取全部项目接口里获取项目的id字段
+skuId	string	是	商品id
+orderInfo	object	是	商品下单明细, 示例: {"quantity": 1,"coupon": "","contactInfo": "","affCode":""}, 其中quantity为下单数量, coupon为优惠券(没有请传空字符串), contactInfo为联系方式(必填), 用户可通过此值找回订单, 字符长度为5-100, affCode是代理商推广码(选填)。
+针对BUYMEABTC项目, 不需要传skuId字段, orderInfo字段格式如下:
+
+{"amount":5, "private": false, "name": "", "message": ""}
+
+amount赞助金额, 单位usd
+private是否公开赞助信息
+name昵称，可为空
+message留言消息，可为空
+支付商品订单 公开
+获取订单支付跳转链接。
+
+如果订单价格为0，将直接购买成功并且不返回支付链接。
+
+对于使用支付宝/微信支付场景, 应该添加以下提示语: 【如果无法打开支付页面, 请关闭VPN或切换网络。】
+
+POST /mapi/order/pay
+
+字段	类型	是否必填	描述
+id	string	是	订单id
+method	string	是	支付method, 来自于订单详情接口字段mPayments里的的method值
+redirectUrl	string	否	支付成功后的重定向链接, 应该指向订单页面, 需要包含完整域名
+callbackUrl	string	否	订单支付成功或退款时触发的后端回调通知, 会将订单数据以post请求(json格式)发送给此链接, 请在5秒内处理完毕并返回200/201状态码, 否则会认为回调失败, 回调失败时会进行重试(最多5次)。此url必须使用域名https，不能通过ip访问
+回调检查
+
+callbackUrl回调的订单数据字段请参考订单详情api。
+
+你可以通过回调订单的status字段判断当前订单是已支付还是已退款。
+
+在使用回调功能接受到订单通知时, 请主动请求一次订单信息对订单真实状态进行确认。
+
+这样可以避免商家的callbackUrl被漏泄时, 来自第三方的恶意回调。
+
+需要注意: 此处回调优先级高于商家设置的事件钩子。
+
+查询商品订单列表 公开
+根据创建订单时留下的联系方式或订单id，查询订单列表。
+
+GET /mapi/order/search
+
+字段	类型	是否必填	描述
+query	string	是	下单留的联系方式或者订单号
+获取商家订单列表 私密
+按时间倒序获取商家的订单列表。
+
+GET /mapi/order/list
+
+字段	类型	是否必填	描述
+status	string	否	订单状态, 默认为空表示不筛选状态, 可取值: DONE(已完成), NEW(新订单), EXPIRED(已过期), REFUND(已退款)
+page	string	否	翻页参数, 默认为1, 每次翻页+1
+获取全部项目 私密
+返回商家创建的所有项目，包括未上线状态项目。
+
+GET /mapi/project/list
+
+获取指定项目 私密
+获取项目包含的所有数据，包括商品列表，定价列表，优惠券列表。
+
+并且数字商品会返回所有库存数据。
+
+GET /mapi/project/detail
+
+字段	类型	是否必填	描述
+id	string	是	项目id
+新建项目 私密
+创建一个新项目。
+
+POST /mapi/project/add
+
+字段	类型	是否必填	描述
+name	string	是	项目名称
+type	string	是	项目类型, 目前支持数字商品:DIGITAL
+修改项目信息 私密
+修改项目基础信息。
+
+POST /mapi/project/update
+
+字段	类型	是否必填	描述
+id	string	是	项目id, 可从项目列表接口获取
+name	string	是	项目名称, 字数不超过50
+status	string	是	项目状态, 可选值: ONLINE, OFFLINE
+i18nType	string	否	自动翻译状态, 可选值: 开启-0, 关闭-1, 默认为1
+desc	string	否	项目描述, 字数不超过500
+cover	string	否	图片base64编码, 不得超过2Mb, 仅支持PNG、JPG、JPEG格式, 样例:data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAkACQAAD...
+删除项目(不可撤销) 私密
+删除项目。
+
+POST /mapi/project/remove
+
+字段	类型	是否必填	描述
+project	string	是	项目id
+获取单个商品/SKU详情 私密
+获取项目下指定商品的详细信息，数字商品将返回数据项。
+
+GET /mapi/project/sku/detail
+
+字段	类型	是否必填	描述
+id	string	是	商品/SKU id
+新增项目商品/SKU 私密
+在指定项目下增加一个商品。
+
+POST /mapi/project/sku/add
+
+字段	类型	是否必填	描述
+projectId	string	是	项目id
+更新商品/SKU 私密
+更新商品信息。
+
+修改数字商品库存数据时，会使用新的数据直接覆盖原来的库存数据项。
+
+因此如果要更改数字商品的库存数据项，请先将商品下架，以防止导致与正在购买的订单产生冲突。
+
+POST /mapi/project/sku/update
+
+字段	类型	是否必填	描述
+id	string	是	商品/SKU id
+name	string	否	商品名称, 字数不大于50
+status	string	否	商品状态, 可选值: ONLINE, OFFLINE
+priority	number	否	商品优先级, 取值范围为1-100
+itemType	string	否	数据项类型, 可取值: 重复出售-reuse、售后删档-consumable
+items	array	否	数字商品的数据项, 每一个元素均对应一个卡密, 例如:["123", "456"], 必须同时传递itemType参数。 🔔 此值会直接覆盖原来的卡密, 请谨慎调用
+docLink	string	否	外部文档链接
+hiddenStock	bool	否	是否隐藏库存, 取值 true或false
+desc	string	否	项目描述, 字数不大于500
+更新商品时，至少保证有一个有效字段需要更新，否则会返回失败。
+
+删除商品/SKU 私密
+永久删除商品，无法撤销。
+
+POST /mapi/project/sku/remove
+
+字段	类型	是否必填	描述
+id	string	是	商品/SKU id
+新增定价计划 私密
+添加一个定价计划。
+
+POST /mapi/project/pricing/add
+
+字段	类型	是否必填	描述
+projectId	string	是	项目id
+更新定价计划 私密
+修改定价计划。
+
+POST /mapi/project/pricing/update
+
+字段	类型	是否必填	描述
+id	string	是	定价计划id
+status	string	是	商品状态, 可选值: ONLINE, OFFLINE
+scope	string	是	商品状态, 可选值: 全局-global, 指定范围-specific
+scopeItems	array	否	当scope=specific时, 此数组元素为需要生效的商品id, 且不能为空
+policy	string	是	定价策略, 可选值: 固定价-fixed, 批发价-stage_quantity
+price	string	否	固定价格, 当policy=fixed时, 需要传此参数
+stages	object	否	批发价设置, 当policy=stage_quantity时, 需要传此参数, 示例: [{ "threshold": 0, 'price': 10 },{ "threshold": 10, 'price': 8 }]表示购买数量小于10个的单价为10usd, 大于等于10个的单价为8usd, 最多设置5个阶梯
+删除定价计划 私密
+永久删除定价计划，无法撤销。
+
+请保证商品至少有一个可用的定价计划。
+
+POST /mapi/project/pricing/remove
+
+字段	类型	是否必填	描述
+id	string	是	定价计划id
+新增优惠券 私密
+添加一个优惠券。
+
+POST /mapi/project/coupon/add
+
+字段	类型	是否必填	描述
+projectId	string	是	项目id
+更新优惠券 私密
+修改优惠券规则。
+
+POST /mapi/project/coupon/update
+
+字段	类型	是否必填	描述
+id	string	是	优惠券id
+status	string	是	商品状态, 可选值: ONLINE, OFFLINE
+scope	string	是	商品状态, 可选值: 全局-global, 指定范围-specific
+scopeItems	array	否	当scope=specific时, 此数组元素为需要生效的商品id, 且不能为空
+policy	string	是	定价策略, 可选值: 减价券-reduction, 打折券-discount, 一口价券-fixed
+reduction	number	否	减价券的金额, 当policy=reduction时, 需要传此参数
+fixed	number	否	一口价券金额, 当policy=fixed时, 需要传此参数
+discount	number	否	打折券比例, 取值范围1-100, 当policy=discount时, 需要传此参数
+capped	number	否	打折券优惠上限, 当policy=discount时, 可以通过传此参数控制最多优惠的金额数量
+删除优惠券 私密
+永久删除优惠券，无法撤销。
+
+POST /mapi/project/coupon/remove
+
+字段	类型	是否必填	描述
+id	string	是	优惠券id
+telegram机器人群发消息 私密
+此功能需要商家先开通了自定义telegram机器人, 商家也可以直接在商城应用Telegram群发助手使用。
+
+添加一条telegram广播消息，使用商家自定义的telegram机器人发送。
+
+🔔 本接口不限制群发消息次数，但是同一时间只能有一条正在群发的消息，必须等待上一条群发处理完后才能继续群发。
+
+强烈建议合理使用此功能，每次群发会自动剔除无效用户。
+
+POST /mapi/rainbow/broadcast/add
+
+字段	类型	是否必填	描述
+content	string	是	群发文本内容, 长度不能超过4000
+test	bool	是	是否为测试模式, 传true表示只给商家绑定的账号发送(常用于正式群发前的效果测试), 传false表示群发给所有可接收消息的用户
+获取telegram机器人历史群发记录 私密
+获取近期telemgram机器人群发的历史记录，包括返回群发用户总数、拒收用户、发送成功数量、执行总时长
+
+GET /mapi/rainbow/broadcast/list
+
+查询License授权码 公开
+查询License详情。
+
+GET /mapi/license/query
+
+字段	类型	是否必填	描述
+code	string	是	授权码, 支持同时传入多个(使用逗号分隔), 一次最多传100个
+激活License授权码 私密
+将License商品售出的授权码标记为已使用状态, 此过程不可逆。
+
+授权码只能激活一次, 授权码在被使用后商家应该调用此接口进行激活处理, 防止被重复使用。
+
+POST /mapi/license/activate
+
+字段	类型	是否必填	描述
+code	string	是	授权码, 支持同时传入多个(使用逗号分隔), 一次最多传100个
+返回结果里会包含成功激活的授权码信息。
+
+最后更新于: 2026/1/4 21:20:15
+
+Pager
+上一页
+🎯 隧道代理
+下一页
+代理API国家码

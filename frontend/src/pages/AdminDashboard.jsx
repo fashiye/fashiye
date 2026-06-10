@@ -14,10 +14,11 @@ const AdminDashboard = () => {
 
   const 获取当前用户 = async () => {
     try {
-      const 响应 = await api.get('/auth/me');
-      set当前用户(响应.data);
-      if (响应.data.role === 'operator') {
-        const 权限响应 = await api.get(`/admin/admins/${响应.data.id}/permissions`);
+      const 响应 = await api.get('/users/me');
+      const 用户数据 = 响应.data.data;
+      set当前用户(用户数据);
+      if (用户数据.role === 'operator') {
+        const 权限响应 = await api.get(`/admin/admins/${用户数据.id}/permissions`);
         set我的权限(权限响应.data.data.permissions || []);
       }
     } catch (错误) {

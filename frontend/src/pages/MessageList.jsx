@@ -15,7 +15,7 @@ const MessageList = () => {
     setIsLoading(true);
     try {
       const response = await api.get('/conversations');
-      setConversations(response.data);
+      setConversations(response.data.data);
     } catch (err) {
       console.error('获取会话列表失败:', err);
     } finally {

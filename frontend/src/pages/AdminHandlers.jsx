@@ -16,13 +16,27 @@ const AdminHandlers = () => {
   const [总页数, set总页数] = useState(1);
   const [总条数, set总条数] = useState(0);
   const [状态筛选, set状态筛选] = useState('');
+  const [选中ID集合, set选中ID集合] = useState(new Set());
+  const [删除确认弹窗, set删除确认弹窗] = useState({ show: false, ids: [], 提示文本: '' });
   const [编辑等级弹窗, set编辑等级弹窗] = useState(null);
   const [新等级, set新等级] = useState(1);
+  const [提示, set提示] = useState({ show: false, type: 'success', message: '' });
   const 每页条数 = 10;
 
   useEffect(() => {
     获取打手列表();
   }, [当前页, 状态筛选]);
+
+  useEffect(() => {
+    if (提示.show) {
+      const 定时器 = setTimeout(() => set提示({ show: false, type: '', message: '' }), 3000);
+      return () => clearTimeout(定时器);
+    }
+  }, [提示.show]);
+
+  const 显示提示 = (message, type = 'success') => {
+    set提示({ show: true, type, message });
+  };
 
   const 获取打手列表 = async () => {
     set加载中(true);
@@ -32,58 +46,129 @@ const AdminHandlers = () => {
         params.status = 状态筛选;
       }
       const 响应 = await api.get('/admin/handlers', { params });
-      set打手列表(响应.data.items);
-      set总页数(响应.data.pages);
-      set总条数(响应.data.total);
+      set打手列表(响应.data.data.items);
+      set总页数(Math.ceil((响应.data.data.total || 0) / 每页条数));
+      set总条数(响应.data.data.total);
     } catch (错误) {
       console.error('获取打手列表失败:', 错误);
+      显示提示('获取打手列表失败', 'error');
     } finally {
       set加载中(false);
     }
   };
 
+  // 全选/取消全选
+  const 切换全选 = () => {
+    if (选中ID集合.size === 打手列表.length) {
+      set选中ID集合(new Set());
+    } else {
+      set选中ID集合(new Set(打手列表.map(h => h.id)));
+    }
+  };
+
+  // 切换单个选中
+  const 切换选中 = (id) => {
+    const 新集合 = new Set(选中ID集合);
+    if (新集合.has(id)) {
+      新集合.delete(id);
+    } else {
+      新集合.add(id);
+    }
+    set选中ID集合(新集合);
+  };
+
   const 处理审核通过 = async (打手id, 用户名) => {
-    if (!window.confirm(`确定审核通过打手 "${用户名}" 吗？`)) return;
+    set删除确认弹窗({
+      show: true,
+      ids: [],
+      提示文本: `确定审核通过打手 "${用户名}" 吗？`,
+      操作类型: 'approve',
+      操作ID: 打手id
+    });
+  };
+
+  const 审核确认执行 = async () => {
+    const { 操作类型, 操作ID } = 删除确认弹窗;
     try {
-      await api.post(`/admin/handlers/${打手id}/approve`);
-      alert('审核通过成功');
+      if (操作类型 === 'approve') {
+        await api.post(`/admin/handlers/${操作ID}/approve`);
+      } else if (操作类型 === 'reject') {
+        await api.post(`/admin/handlers/${操作ID}/reject`);
+      }
+      显示提示(操作类型 === 'approve' ? '审核通过成功' : '已拒绝该申请');
+      set删除确认弹窗({ show: false, ids: [], 提示文本: '' });
       获取打手列表();
     } catch (错误) {
-      alert(`审核失败: ${错误.response?.data?.detail || '未知错误'}`);
+      显示提示(`操作失败: ${错误.response?.data?.detail || '未知错误'}`, 'error');
     }
   };
 
   const 处理审核拒绝 = async (打手id, 用户名) => {
-    if (!window.confirm(`确定拒绝打手 "${用户名}" 的注册申请吗？`)) return;
-    try {
-      await api.post(`/admin/handlers/${打手id}/reject`);
-      alert('已拒绝该申请');
-      获取打手列表();
-    } catch (错误) {
-      alert(`操作失败: ${错误.response?.data?.detail || '未知错误'}`);
-    }
+    set删除确认弹窗({
+      show: true,
+      ids: [],
+      提示文本: `确定拒绝打手 "${用户名}" 的注册申请吗？`,
+      操作类型: 'reject',
+      操作ID: 打手id
+    });
   };
 
   const 处理封禁解禁 = async (打手id, 用户名, 当前状态) => {
     const 操作文本 = 当前状态 === 1 ? '封禁' : '解禁';
-    if (!window.confirm(`确定${操作文本}打手 "${用户名}" 吗？`)) return;
+    set删除确认弹窗({
+      show: true,
+      ids: [],
+      提示文本: `确定${操作文本}打手 "${用户名}" 吗？`,
+      操作类型: 'toggleStatus',
+      操作ID: 打手id,
+      目标状态: 当前状态 === 1 ? 3 : 1
+    });
+  };
+
+  const 状态切换确认执行 = async () => {
+    const { 操作ID, 目标状态 } = 删除确认弹窗;
     try {
-      await api.put(`/admin/handlers/${打手id}/ban`);
-      alert(`${操作文本}成功`);
+      await api.put(`/admin/handlers/${操作ID}/status`, { status: 目标状态 });
+      const 操作文本 = 目标状态 === 3 ? '封禁' : '解禁';
+      显示提示(`${操作文本}成功`);
+      set删除确认弹窗({ show: false, ids: [], 提示文本: '' });
       获取打手列表();
     } catch (错误) {
-      alert(`${操作文本}失败: ${错误.response?.data?.detail || '未知错误'}`);
+      显示提示(`操作失败: ${错误.response?.data?.detail || '未知错误'}`, 'error');
     }
   };
 
-  const 处理删除 = async (打手id, 用户名) => {
-    if (!window.confirm(`确定要删除打手 "${用户名}" 吗？此操作不可恢复！`)) return;
+  const 处理删除打手 = (打手id, 用户名) => {
+    set删除确认弹窗({
+      show: true,
+      ids: [打手id],
+      提示文本: `确定要删除打手 "${用户名}" 吗？此操作不可恢复！`,
+      操作类型: 'delete'
+    });
+  };
+
+  const 处理批量删除 = () => {
+    if (选中ID集合.size === 0) return;
+    set删除确认弹窗({
+      show: true,
+      ids: [...选中ID集合],
+      提示文本: `确定要删除选中的 ${选中ID集合.size} 个打手吗？此操作不可恢复！`,
+      操作类型: 'batchDelete'
+    });
+  };
+
+  const 删除确认执行 = async () => {
+    const { ids, 操作类型 } = 删除确认弹窗;
     try {
-      await api.delete(`/users/${打手id}?role=handler`);
-      alert('删除成功');
+      if (操作类型 === 'delete' || 操作类型 === 'batchDelete') {
+        await Promise.all(ids.map(id => api.delete(`/admin/users/${id}`)));
+        set选中ID集合(new Set());
+        显示提示(`成功删除 ${ids.length} 个打手`);
+      }
+      set删除确认弹窗({ show: false, ids: [], 提示文本: '' });
       获取打手列表();
     } catch (错误) {
-      alert(`删除失败: ${错误.response?.data?.detail || '未知错误'}`);
+      显示提示(`删除失败: ${错误.response?.data?.detail || '未知错误'}`, 'error');
     }
   };
 
@@ -96,11 +181,11 @@ const AdminHandlers = () => {
     if (!编辑等级弹窗) return;
     try {
       await api.put(`/admin/handlers/${编辑等级弹窗.id}/level`, { level: 新等级 });
-      alert('等级已更新');
+      显示提示('等级已更新');
       set编辑等级弹窗(null);
       获取打手列表();
     } catch (错误) {
-      alert(`等级更新失败: ${错误.response?.data?.detail || '未知错误'}`);
+      显示提示(`等级更新失败: ${错误.response?.data?.detail || '未知错误'}`, 'error');
     }
   };
 
@@ -125,8 +210,51 @@ const AdminHandlers = () => {
     return 页码;
   };
 
+  // 判断确认弹窗的类型
+  const 当前弹窗标题 = () => {
+    const 类型 = 删除确认弹窗.操作类型;
+    if (类型 === 'approve') return '审核通过';
+    if (类型 === 'reject') return '拒绝申请';
+    if (类型 === 'toggleStatus') return '确认操作';
+    return '确认删除';
+  };
+
+  const 当前弹窗确认按钮 = () => {
+    const 类型 = 删除确认弹窗.操作类型;
+    if (类型 === 'delete' || 类型 === 'batchDelete') {
+      return { text: '确认删除', color: '#dc3545' };
+    }
+    return { text: '确认', color: '#ffc107' };
+  };
+
+  const 弹窗确认执行 = () => {
+    const 类型 = 删除确认弹窗.操作类型;
+    if (类型 === 'approve' || 类型 === 'reject') {
+      审核确认执行();
+    } else if (类型 === 'toggleStatus') {
+      状态切换确认执行();
+    } else {
+      删除确认执行();
+    }
+  };
+
   return (
     <div className="dashboard-container admin-dashboard">
+      {/* 气泡提示 */}
+      {提示.show && (
+        <div style={{
+          position: 'fixed', top: '20px', right: '20px', zIndex: 9999,
+          padding: '12px 24px', borderRadius: '6px',
+          backgroundColor: 提示.type === 'success' ? '#d4edda' : '#f8d7da',
+          color: 提示.type === 'success' ? '#155724' : '#721c24',
+          border: `1px solid ${提示.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
+          boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+          fontSize: '14px', fontWeight: 500
+        }}>
+          {提示.message}
+        </div>
+      )}
+
       <header className="dashboard-header">
         <div className="header-left">
           <h1>打手管理</h1>
@@ -137,19 +265,39 @@ const AdminHandlers = () => {
       </header>
 
       <main className="dashboard-content">
-        <div style={{ marginBottom: '20px' }}>
-          <select
-            value={状态筛选}
-            onChange={(e) => { set状态筛选(e.target.value); set当前页(1); }}
-            style={{ padding: '8px 16px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '14px' }}
-          >
-            <option value="">全部打手</option>
-            <option value="0">待审核</option>
-            <option value="1">正常</option>
-            <option value="2">未通过</option>
-            <option value="3">已封禁</option>
-          </select>
-          <span style={{ marginLeft: '15px', color: '#666', fontSize: '14px' }}>共 {总条数} 条记录</span>
+        <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <select
+              value={状态筛选}
+              onChange={(e) => { set状态筛选(e.target.value); set当前页(1); }}
+              style={{ padding: '8px 16px', borderRadius: '4px', border: '1px solid #ddd', fontSize: '14px' }}
+            >
+              <option value="">全部打手</option>
+              <option value="0">待审核</option>
+              <option value="1">正常</option>
+              <option value="2">未通过</option>
+              <option value="3">已封禁</option>
+            </select>
+            <span style={{ color: '#666', fontSize: '14px' }}>
+              共 {总条数} 条记录
+              {选中ID集合.size > 0 && (
+                <span style={{ marginLeft: '10px', color: '#007bff' }}>
+                  （已选 {选中ID集合.size} 项）
+                </span>
+              )}
+            </span>
+          </div>
+          {选中ID集合.size > 0 && (
+            <button
+              onClick={处理批量删除}
+              style={{
+                padding: '6px 16px', backgroundColor: '#dc3545', color: 'white',
+                border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px'
+              }}
+            >
+              批量删除（{选中ID集合.size}）
+            </button>
+          )}
         </div>
 
         {加载中 ? (
@@ -159,6 +307,14 @@ const AdminHandlers = () => {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th style={{ width: '40px' }}>
+                    <input
+                      type="checkbox"
+                      checked={打手列表.length > 0 && 选中ID集合.size === 打手列表.length}
+                      onChange={切换全选}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  </th>
                   <th>ID</th>
                   <th>用户名</th>
                   <th>邮箱</th>
@@ -172,7 +328,17 @@ const AdminHandlers = () => {
               </thead>
               <tbody>
                 {打手列表.map(打手 => (
-                  <tr key={打手.id}>
+                  <tr key={打手.id} style={{
+                    backgroundColor: 选中ID集合.has(打手.id) ? '#f0f7ff' : 'transparent'
+                  }}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={选中ID集合.has(打手.id)}
+                        onChange={() => 切换选中(打手.id)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    </td>
                     <td>{打手.id}</td>
                     <td>{打手.username}</td>
                     <td>{打手.email}</td>
@@ -254,7 +420,7 @@ const AdminHandlers = () => {
                           </button>
                         )}
                         <button
-                          onClick={() => 处理删除(打手.id, 打手.username)}
+                          onClick={() => 处理删除打手(打手.id, 打手.username)}
                           style={{
                             padding: '5px 12px', backgroundColor: '#6c757d', color: 'white',
                             border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px'
@@ -296,12 +462,58 @@ const AdminHandlers = () => {
                 >
                   下一页
                 </button>
+                <span style={{ marginLeft: '20px', color: '#666', fontSize: '14px' }}>
+                  共 {总条数} 条记录，第 {当前页}/{总页数} 页
+                </span>
               </div>
             )}
           </div>
         )}
       </main>
 
+      {/* 统一确认弹窗（覆盖删除/审核/封禁） */}
+      {删除确认弹窗.show && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white', padding: '24px', borderRadius: '8px',
+            maxWidth: '400px', width: '90%', boxShadow: '0 4px 16px rgba(0,0,0,0.2)'
+          }}>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '16px' }}>{当前弹窗标题()}</h3>
+            <p style={{ fontSize: '14px' }}>{删除确认弹窗.提示文本}</p>
+            {(删除确认弹窗.操作类型 === 'delete' || 删除确认弹窗.操作类型 === 'batchDelete') && (
+              <p style={{ color: '#999', fontSize: '13px', margin: '8px 0 0 0' }}>此操作不可恢复</p>
+            )}
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                onClick={() => set删除确认弹窗({ show: false, ids: [], 提示文本: '' })}
+                style={{
+                  padding: '8px 20px', backgroundColor: '#6c757d', color: 'white',
+                  border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px'
+                }}
+              >
+                取消
+              </button>
+              <button
+                onClick={弹窗确认执行}
+                style={{
+                  padding: '8px 20px',
+                  backgroundColor: 当前弹窗确认按钮().color,
+                  color: 当前弹窗确认按钮().text === '确认删除' ? 'white' : '#333',
+                  border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px'
+                }}
+              >
+                {当前弹窗确认按钮().text}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 等级编辑弹窗 */}
       {编辑等级弹窗 && (
         <div
           style={{

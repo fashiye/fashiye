@@ -30,7 +30,8 @@ const OrderPool = () => {
 
       const response = await api.get('/orders/pool', { params });
 
-      setOrders(response.data);
+      // 后端返回格式：{code: 0, data: {items: [...], total, page, pageSize}, message: "..."}
+      setOrders(response.data?.data?.items || []);
     } catch (err) {
       console.error('获取订单池失败:', err);
     } finally {

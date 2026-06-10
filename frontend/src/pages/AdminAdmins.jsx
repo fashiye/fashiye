@@ -17,6 +17,9 @@ const AdminAdmins = () => {
   const [当前页, set当前页] = useState(1);
   const [总页数, set总页数] = useState(1);
   const [总条数, set总条数] = useState(0);
+  const [选中ID集合, set选中ID集合] = useState(new Set());
+  const [删除确认弹窗, set删除确认弹窗] = useState({ show: false, ids: [], 提示文本: '' });
+  const [提示, set提示] = useState({ show: false, type: 'success', message: '' });
 
   const [显示创建弹窗, set显示创建弹窗] = useState(false);
   const [新建用户名, set新建用户名] = useState('');
@@ -33,23 +36,56 @@ const AdminAdmins = () => {
     获取管理员列表();
   }, [当前页]);
 
+  useEffect(() => {
+    if (提示.show) {
+      const 定时器 = setTimeout(() => set提示({ show: false, type: '', message: '' }), 3000);
+      return () => clearTimeout(定时器);
+    }
+  }, [提示.show]);
+
+  const 显示提示 = (message, type = 'success') => {
+    set提示({ show: true, type, message });
+  };
+
   const 获取管理员列表 = async () => {
     set加载中(true);
     try {
       const 响应 = await api.get('/admin/admins', { params: { page: 当前页, size: 每页条数 } });
-      set管理员列表(响应.data.items);
-      set总页数(响应.data.pages);
-      set总条数(响应.data.total);
+      set管理员列表(响应.data.data.items);
+      set总页数(响应.data.data.pages);
+      set总条数(响应.data.data.total);
     } catch (错误) {
       console.error('获取管理员列表失败:', 错误);
+      显示提示('获取管理员列表失败', 'error');
     } finally {
       set加载中(false);
     }
   };
 
+  // 全选/取消全选
+  const 切换全选 = () => {
+    const 可删管理员 = 管理员列表.filter(a => a.role !== 'super');
+    if (可删管理员.length > 0 && 选中ID集合.size === 可删管理员.length) {
+      set选中ID集合(new Set());
+    } else {
+      set选中ID集合(new Set(可删管理员.map(a => a.id)));
+    }
+  };
+
+  // 切换单个选中
+  const 切换选中 = (id) => {
+    const 新集合 = new Set(选中ID集合);
+    if (新集合.has(id)) {
+      新集合.delete(id);
+    } else {
+      新集合.add(id);
+    }
+    set选中ID集合(新集合);
+  };
+
   const 处理创建管理员 = async () => {
     if (!新建用户名.trim() || !新建邮箱.trim() || !新建密码.trim()) {
-      alert('请填写完整信息');
+      显示提示('请填写完整信息', 'error');
       return;
     }
     set创建中(true);
@@ -60,7 +96,7 @@ const AdminAdmins = () => {
         password: 新建密码,
         permissions: 新建权限
       });
-      alert('管理员创建成功');
+      显示提示('管理员创建成功');
       set显示创建弹窗(false);
       set新建用户名('');
       set新建邮箱('');
@@ -68,20 +104,39 @@ const AdminAdmins = () => {
       set新建权限([]);
       获取管理员列表();
     } catch (错误) {
-      alert(`创建失败: ${错误.response?.data?.detail || '未知错误'}`);
+      显示提示(`创建失败: ${错误.response?.data?.detail || '未知错误'}`, 'error');
     } finally {
       set创建中(false);
     }
   };
 
-  const 处理删除管理员 = async (管理员id, 用户名) => {
-    if (!window.confirm(`确定要删除管理员 "${用户名}" 吗？`)) return;
+  const 处理删除管理员 = (管理员id, 用户名) => {
+    set删除确认弹窗({
+      show: true,
+      ids: [管理员id],
+      提示文本: `确定要删除管理员 "${用户名}" 吗？`
+    });
+  };
+
+  const 处理批量删除 = () => {
+    if (选中ID集合.size === 0) return;
+    set删除确认弹窗({
+      show: true,
+      ids: [...选中ID集合],
+      提示文本: `确定要删除选中的 ${选中ID集合.size} 个管理员吗？`
+    });
+  };
+
+  const 删除确认执行 = async () => {
+    const { ids } = 删除确认弹窗;
     try {
-      await api.delete(`/admin/admins/${管理员id}`);
-      alert('删除成功');
+      await Promise.all(ids.map(id => api.delete(`/admin/admins/${id}`)));
+      set选中ID集合(new Set());
+      set删除确认弹窗({ show: false, ids: [], 提示文本: '' });
+      显示提示(`成功删除 ${ids.length} 个管理员`);
       获取管理员列表();
     } catch (错误) {
-      alert(`删除失败: ${错误.response?.data?.detail || '未知错误'}`);
+      显示提示(`删除失败: ${错误.response?.data?.detail || '未知错误'}`, 'error');
     }
   };
 
@@ -100,11 +155,11 @@ const AdminAdmins = () => {
     if (!显示权限弹窗) return;
     try {
       await api.put(`/admin/admins/${显示权限弹窗.id}/permissions`, { permissions: 编辑权限 });
-      alert('权限已更新');
+      显示提示('权限已更新');
       set显示权限弹窗(null);
       获取管理员列表();
     } catch (错误) {
-      alert(`权限更新失败: ${错误.response?.data?.detail || '未知错误'}`);
+      显示提示(`权限更新失败: ${错误.response?.data?.detail || '未知错误'}`, 'error');
     }
   };
 
@@ -143,6 +198,21 @@ const AdminAdmins = () => {
 
   return (
     <div className="dashboard-container admin-dashboard">
+      {/* 气泡提示 */}
+      {提示.show && (
+        <div style={{
+          position: 'fixed', top: '20px', right: '20px', zIndex: 9999,
+          padding: '12px 24px', borderRadius: '6px',
+          backgroundColor: 提示.type === 'success' ? '#d4edda' : '#f8d7da',
+          color: 提示.type === 'success' ? '#155724' : '#721c24',
+          border: `1px solid ${提示.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`,
+          boxShadow: '0 2px 12px rgba(0,0,0,0.15)',
+          fontSize: '14px', fontWeight: 500
+        }}>
+          {提示.message}
+        </div>
+      )}
+
       <header className="dashboard-header">
         <div className="header-left">
           <h1>管理员管理</h1>
@@ -162,6 +232,28 @@ const AdminAdmins = () => {
       </header>
 
       <main className="dashboard-content">
+        <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ color: '#666', fontSize: '14px' }}>
+            共 {总条数} 条记录
+            {选中ID集合.size > 0 && (
+              <span style={{ marginLeft: '10px', color: '#007bff' }}>
+                （已选 {选中ID集合.size} 项）
+              </span>
+            )}
+          </div>
+          {选中ID集合.size > 0 && (
+            <button
+              onClick={处理批量删除}
+              style={{
+                padding: '6px 16px', backgroundColor: '#dc3545', color: 'white',
+                border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px'
+              }}
+            >
+              批量删除（{选中ID集合.size}）
+            </button>
+          )}
+        </div>
+
         {加载中 ? (
           <div className="loading">加载中...</div>
         ) : (
@@ -169,6 +261,14 @@ const AdminAdmins = () => {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th style={{ width: '40px' }}>
+                    <input
+                      type="checkbox"
+                      checked={管理员列表.filter(a => a.role !== 'super').length > 0 && 选中ID集合.size === 管理员列表.filter(a => a.role !== 'super').length}
+                      onChange={切换全选}
+                      style={{ cursor: 'pointer' }}
+                    />
+                  </th>
                   <th>ID</th>
                   <th>用户名</th>
                   <th>邮箱</th>
@@ -181,7 +281,20 @@ const AdminAdmins = () => {
               </thead>
               <tbody>
                 {管理员列表.map(管理员 => (
-                  <tr key={管理员.id}>
+                  <tr key={管理员.id} style={{
+                    backgroundColor: 选中ID集合.has(管理员.id) ? '#f0f7ff' : 'transparent',
+                    opacity: 管理员.role === 'super' ? 0.7 : 1
+                  }}>
+                    <td>
+                      {管理员.role !== 'super' && (
+                        <input
+                          type="checkbox"
+                          checked={选中ID集合.has(管理员.id)}
+                          onChange={() => 切换选中(管理员.id)}
+                          style={{ cursor: 'pointer' }}
+                        />
+                      )}
+                    </td>
                     <td>{管理员.id}</td>
                     <td>{管理员.username}</td>
                     <td>{管理员.email}</td>
@@ -268,12 +381,48 @@ const AdminAdmins = () => {
                   color: 当前页 === 总页数 ? '#ccc' : '#333',
                   cursor: 当前页 === 总页数 ? 'not-allowed' : 'pointer', borderRadius: '4px'
                 }}>下一页</button>
+                <span style={{ marginLeft: '20px', color: '#666' }}>
+                  共 {总条数} 条记录，第 {当前页}/{总页数} 页
+                </span>
               </div>
             )}
           </div>
         )}
       </main>
 
+      {/* 删除确认弹窗 */}
+      {删除确认弹窗.show && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: 'white', padding: '24px', borderRadius: '8px',
+            maxWidth: '400px', width: '90%', boxShadow: '0 4px 16px rgba(0,0,0,0.2)'
+          }}>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '16px' }}>确认删除</h3>
+            <p style={{ fontSize: '14px' }}>{删除确认弹窗.提示文本}</p>
+            <p style={{ color: '#999', fontSize: '13px', margin: '8px 0 0 0' }}>此操作不可恢复</p>
+            <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                onClick={() => set删除确认弹窗({ show: false, ids: [], 提示文本: '' })}
+                style={{ padding: '8px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' }}
+              >
+                取消
+              </button>
+              <button
+                onClick={删除确认执行}
+                style={{ padding: '8px 20px', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' }}
+              >
+                确认删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 创建管理员弹窗 */}
       {显示创建弹窗 && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
@@ -340,6 +489,7 @@ const AdminAdmins = () => {
         </div>
       )}
 
+      {/* 权限编辑弹窗 */}
       {显示权限弹窗 && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,

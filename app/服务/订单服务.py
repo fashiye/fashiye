@@ -6,7 +6,7 @@ from typing import Optional, List, Tuple
 from app.模型.订单 import 订单表, 订单操作日志表, 订单状态枚举
 from app.模型.订单项目 import 订单项目表
 from app.模型.游戏 import 项目表, 游戏表
-from app.模式.订单 import 订单创建, 订单项目创建
+from app.模式.订单 import 订单创建, 订单项目创建, 管理员零元测试订单创建
 from app.工具.订单号生成器 import 生成订单号
 from app.工具.价格计算器 import 计算项目价格
 from app.核心.加密 import 加解密工具
@@ -49,6 +49,7 @@ class 订单服务类:
             用户ID=用户ID,
             游戏ID=订单数据.gameId,
             总金额=总金额,
+            状态=订单状态枚举.待支付.value,
             账号信息密文=账号信息密文,
             需求描述=订单数据.requirements,
             订单项列表=订单项列表
@@ -102,6 +103,129 @@ class 订单服务类:
         return 订单列表, 总记录数
 
     @staticmethod
+    async def 获取所有订单(
+        数据库: AsyncSession,
+        状态过滤: Optional[str] = None,
+        页码: int = 1,
+        每页数量: int = 200
+    ) -> Tuple[List[订单表], int]:
+        """获取所有订单列表（管理员用），支持状态筛选和分页"""
+        查询条件 = True
+        if 状态过滤:
+            查询条件 = (订单表.状态 == 状态过滤)
+
+        查询 = select(订单表).where(查询条件).options(
+            joinedload(订单表.游戏),
+            joinedload(订单表.订单项列表),
+            joinedload(订单表.用户),
+            joinedload(订单表.打手)
+        ).order_by(订单表.创建时间.desc())
+
+        总记录数查询 = select(func.count()).select_from(订单表).where(查询条件)
+        总记录数结果 = await 数据库.execute(总记录数查询)
+        总记录数 = 总记录数结果.scalar()
+
+        查询 = 查询.offset((页码 - 1) * 每页数量).limit(每页数量)
+        结果 = await 数据库.execute(查询)
+        订单列表 = 结果.unique().scalars().all()
+
+        返回数据 = []
+        for 订单 in 订单列表:
+            返回数据.append({
+                "id": 订单.id,
+                "orderNo": 订单.订单号,
+                "userId": 订单.用户ID,
+                "userName": 订单.用户.用户名 if 订单.用户 else None,
+                "handlerId": 订单.打手ID,
+                "handlerName": 订单.打手.用户名 if 订单.打手 else None,
+                "gameName": 订单.游戏.名称 if 订单.游戏 else "",
+                "totalAmount": float(订单.总金额),
+                "status": 订单.状态,
+                "createdAt": 订单.创建时间.isoformat() if 订单.创建时间 else None
+            })
+
+        return 返回数据, 总记录数
+
+    @staticmethod
+    async def 获取待审核订单(
+        数据库: AsyncSession,
+        页码: int = 1,
+        每页数量: int = 20
+    ) -> Tuple[List[订单表], int]:
+        """获取待审核订单列表（状态为 pending_review），支持分页"""
+        查询条件 = (订单表.状态 == 订单状态枚举.待审核.value)
+
+        查询 = select(订单表).where(查询条件).options(
+            joinedload(订单表.游戏),
+            joinedload(订单表.订单项列表)
+        ).order_by(订单表.创建时间.desc())
+
+        总记录数查询 = select(func.count()).select_from(订单表).where(查询条件)
+        总记录数结果 = await 数据库.execute(总记录数查询)
+        总记录数 = 总记录数结果.scalar()
+
+        查询 = 查询.offset((页码 - 1) * 每页数量).limit(每页数量)
+        结果 = await 数据库.execute(查询)
+        订单列表 = 结果.unique().scalars().all()
+
+        return 订单列表, 总记录数
+
+    @staticmethod
+    async def 批准订单(
+        数据库: AsyncSession,
+        订单ID: int
+    ) -> 订单表:
+        """批准待审核订单，记录操作日志（状态不变，仅记录审核通过）"""
+        订单 = await 数据库.get(订单表, 订单ID)
+        if not 订单:
+            raise ValueError("订单不存在")
+        if 订单.状态 != 订单状态枚举.待审核.value:
+            raise ValueError("仅待审核状态的订单可以批准")
+
+        日志 = 订单操作日志表(
+            订单ID=订单ID,
+            动作="approve",
+            操作者类型="admin",
+            操作者ID=0,
+            旧状态=订单状态枚举.待审核.value,
+            新状态=订单状态枚举.待审核.value,
+            备注="管理员批准订单"
+        )
+        数据库.add(日志)
+        await 数据库.commit()
+        await 数据库.refresh(订单)
+        return 订单
+
+    @staticmethod
+    async def 拒绝订单(
+        数据库: AsyncSession,
+        订单ID: int,
+        备注: Optional[str] = None
+    ) -> 订单表:
+        """拒绝待审核订单，将状态改为已取消"""
+        订单 = await 数据库.get(订单表, 订单ID)
+        if not 订单:
+            raise ValueError("订单不存在")
+        if 订单.状态 != 订单状态枚举.待审核.value:
+            raise ValueError("仅待审核状态的订单可以拒绝")
+
+        订单.状态 = 订单状态枚举.已取消.value
+
+        日志 = 订单操作日志表(
+            订单ID=订单ID,
+            动作="reject",
+            操作者类型="admin",
+            操作者ID=0,
+            旧状态=订单状态枚举.待审核.value,
+            新状态=订单状态枚举.已取消.value,
+            备注=备注 or "管理员拒绝订单"
+        )
+        数据库.add(日志)
+        await 数据库.commit()
+        await 数据库.refresh(订单)
+        return 订单
+
+    @staticmethod
     async def 获取用户订单(
         数据库: AsyncSession,
         用户ID: int,
@@ -138,7 +262,37 @@ class 订单服务类:
         结果 = await 数据库.execute(查询)
         订单列表 = 结果.unique().scalars().all()
 
-        return 订单列表, 总记录数
+        # 传入：SQLAlchemy 订单模型对象列表
+        # 作用：将模型对象转为前端可用的 dict（字段名用英文），包含游戏名和订单项
+        # 传出：dict 列表，每个 dict 含 id, orderNo, gameName, totalAmount, status, createdAt 等
+        返回数据 = []
+        for 订单 in 订单列表:
+            订单项摘要 = []
+            for 项 in (订单.订单项列表 or []):
+                订单项摘要.append({
+                    "id": 项.id,
+                    "projectId": 项.项目ID,
+                    "projectName": 项.项目名称,
+                    "quantity": 项.数量,
+                    "unitPrice": float(项.单价) if 项.单价 else 0,
+                    "totalPrice": float(项.总价) if 项.总价 else 0,
+                })
+            返回数据.append({
+                "id": 订单.id,
+                "orderNo": 订单.订单号,
+                "gameId": 订单.游戏ID,
+                "gameName": 订单.游戏.名称 if 订单.游戏 else "",
+                "totalAmount": float(订单.总金额) if 订单.总金额 else 0,
+                "status": 订单.状态,
+                "handlerId": 订单.打手ID,
+                "accountInfo": 订单.账号信息密文 or "",
+                "requirements": 订单.需求描述 or "",
+                "items": 订单项摘要,
+                "createdAt": 订单.创建时间.isoformat() if 订单.创建时间 else None,
+                "updatedAt": 订单.更新时间.isoformat() if 订单.更新时间 else None,
+            })
+
+        return 返回数据, 总记录数
 
     @staticmethod
     async def 获取订单详情(
@@ -164,7 +318,9 @@ class 订单服务类:
         订单ID: int,
         操作: str,
         备注: Optional[str] = None,
-        证据图片: Optional[List[str]] = None
+        证据图片: Optional[List[str]] = None,
+        操作者类型: str = "admin",
+        操作者ID: int = 0,
     ) -> 订单表:
         """根据操作类型更新订单状态，并记录操作日志"""
         订单 = await 数据库.get(订单表, 订单ID)
@@ -198,8 +354,8 @@ class 订单服务类:
         日志 = 订单操作日志表(
             订单ID=订单ID,
             动作=操作,
-            操作者类型="system",
-            操作者ID=0,
+            操作者类型=操作者类型,
+            操作者ID=操作者ID,
             旧状态=旧状态,
             新状态=新状态,
             备注=备注
@@ -246,6 +402,38 @@ class 订单服务类:
         await 数据库.commit()
 
     @staticmethod
+    async def 接单(
+        数据库: AsyncSession,
+        订单ID: int,
+        打手ID: int
+    ) -> 订单表:
+        """打手接单，将订单状态改为已接单并设置打手ID"""
+        订单 = await 数据库.get(订单表, 订单ID)
+        if not 订单:
+            raise ValueError("订单不存在")
+        if 订单.状态 not in [订单状态枚举.待支付.value, 订单状态枚举.待审核.value]:
+            raise ValueError("当前状态不允许接单")
+        if 订单.打手ID:
+            raise ValueError("该订单已被其他打手接单")
+
+        订单.打手ID = 打手ID
+        订单.状态 = 订单状态枚举.已接单.value
+
+        日志 = 订单操作日志表(
+            订单ID=订单ID,
+            动作="accept",
+            操作者类型="handler",
+            操作者ID=打手ID,
+            旧状态=订单.状态,
+            新状态=订单状态枚举.已接单.value,
+            备注="打手接单"
+        )
+        数据库.add(日志)
+        await 数据库.commit()
+        await 数据库.refresh(订单)
+        return 订单
+
+    @staticmethod
     async def 取消订单(
         数据库: AsyncSession,
         订单ID: int
@@ -287,6 +475,95 @@ class 订单服务类:
         await 数据库.flush()
         
         return await 订单服务类.创建订单(数据库, 匿名用户.id, 订单数据)
+
+    @staticmethod
+    async def 创建零元测试订单(
+        数据库: AsyncSession,
+        管理员ID: int,
+        订单数据: 管理员零元测试订单创建
+    ) -> 订单表:
+        """
+        管理员创建零元测试订单（跳过支付，直接进入待审核状态）。
+
+        传入：
+            数据库：异步数据库会话
+            管理员ID：创建此测试订单的管理员 ID
+            订单数据：包含 gameId、accountInfo、items（可选）等字段
+        作用：
+            1. 查找游戏是否存在
+            2. 如果没有传 items，则使用该游戏的第一个项目作为默认测试项目
+            3. 设置总金额 = 0（零元测试）
+            4. 状态直接设为 "pending_review"（跳过支付）
+            5. 记录操作日志
+        传出：
+            订单表 ORM 对象（已持久化）
+        异常：
+            ValueError: 游戏不存在或该游戏无可用项目
+        """
+        # 查找游戏
+        游戏 = await 数据库.get(游戏表, 订单数据.gameId)
+        if not 游戏:
+            raise ValueError(f"游戏 {订单数据.gameId} 不存在")
+
+        # 构建订单项列表
+        订单项列表 = []
+        if 订单数据.items:
+            for 项目条目 in 订单数据.items:
+                项目 = await 数据库.get(项目表, 项目条目.projectId)
+                if not 项目:
+                    raise ValueError(f"项目 {项目条目.projectId} 不存在")
+                订单项 = 订单项目表(
+                    项目ID=项目.id,
+                    项目名称=项目.名称,
+                    数量=项目条目.quantity,
+                    单价=Decimal('0'),
+                    总价=Decimal('0'),
+                )
+                订单项列表.append(订单项)
+        else:
+            # 未传 items → 查找该游戏第一个项目作为默认测试项目
+            项目查询 = select(项目表).where(项目表.游戏ID == 订单数据.gameId).limit(1)
+            项目结果 = await 数据库.execute(项目查询)
+            默认项目 = 项目结果.scalar_one_or_none()
+            if not 默认项目:
+                raise ValueError(f"游戏 {订单数据.gameId} 下无可用项目，请先创建项目")
+            订单项 = 订单项目表(
+                项目ID=默认项目.id,
+                项目名称=默认项目.名称,
+                数量=1,
+                单价=Decimal('0'),
+                总价=Decimal('0'),
+            )
+            订单项列表.append(订单项)
+
+        # 创建零元测试订单
+        订单 = 订单表(
+            订单号=生成订单号(),
+            用户ID=管理员ID,
+            游戏ID=订单数据.gameId,
+            总金额=Decimal('0.00'),
+            账号信息密文=订单数据.accountInfo,      # 测试订单不加密
+            需求描述=订单数据.requirements or "【管理员零元测试订单】",
+            状态=订单状态枚举.待审核.value,          # 跳过支付，直接进入待审核
+            订单项列表=订单项列表,
+        )
+        数据库.add(订单)
+        await 数据库.flush()
+
+        # 记录操作日志
+        操作日志 = 订单操作日志表(
+            订单ID=订单.id,
+            动作="create_test_order",
+            操作者类型="admin",
+            操作者ID=管理员ID,
+            旧状态=None,
+            新状态=订单状态枚举.待审核.value,
+            备注=订单数据.备注 or "管理员创建零元测试订单",
+        )
+        数据库.add(操作日志)
+        await 数据库.commit()
+        await 数据库.refresh(订单)
+        return 订单
 
     @staticmethod
     async def 根据订单号查询订单(

@@ -33,7 +33,7 @@ class 订单表(数据库基类):
     数量 = Column("quantity", Integer, nullable=True, comment="购买数量")
     单价 = Column("unit_price", DECIMAL(10, 2), nullable=True, comment="单价")
     总金额 = Column("total_amount", DECIMAL(10, 2), nullable=False, comment="订单总金额")
-    状态 = Column("status", String(30), default="pending_review", index=True, comment="订单状态")
+    状态 = Column("status", String(30), default="pending", index=True, comment="订单状态")
     打手ID = Column("handler_id", Integer, ForeignKey("handlers.id"), nullable=True, comment="接单打手 ID")
     接单时间 = Column("accepted_at", DateTime, nullable=True, comment="打手接单时间")
     账号信息密文 = Column("account_info", Text, nullable=True, comment="游戏账号信息 AES 加密密文")

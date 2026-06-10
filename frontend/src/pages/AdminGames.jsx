@@ -1,22 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import './AdminGames.css';
 
-const 游戏图标 = {
-  王者荣耀: '',
-  英雄联盟: '',
-  和平精英: ''
-};
-
 const 状态管理 = () => {
+  const navigate = useNavigate();
   const [游戏列表, 设置游戏列表] = useState([]);
-  const [项目映射, 设置项目映射] = useState({});
-  const [展开的游戏ID, 设置展开的游戏ID] = useState(null);
   const [加载中, 设置加载中] = useState(true);
   const [显示新建游戏弹窗, 设置显示新建游戏弹窗] = useState(false);
-  const [显示新建项目弹窗, 设置显示新建项目弹窗] = useState(false);
   const [显示编辑游戏弹窗, 设置显示编辑游戏弹窗] = useState(false);
-  const [选中的游戏, 设置选中的游戏] = useState(null);
   const [编辑中的游戏, 设置编辑中的游戏] = useState(null);
   const [提示信息, 设置提示信息] = useState(null);
 
@@ -29,7 +21,6 @@ const 状态管理 = () => {
     try {
       const 响应 = await api.get('/games');
       设置游戏列表(响应.data);
-      响应.data.forEach(游戏 => 获取项目列表(游戏.id));
     } catch (错误) {
       console.error('获取游戏列表失败:', 错误);
       显示提示('获取游戏列表失败', 'error');
@@ -38,22 +29,9 @@ const 状态管理 = () => {
     }
   }, []);
 
-  const 获取项目列表 = async (游戏ID) => {
-    try {
-      const 响应 = await api.get(`/games/${游戏ID}/projects`);
-      设置项目映射(prev => ({ ...prev, [游戏ID]: 响应.data }));
-    } catch (错误) {
-      console.error('获取项目列表失败:', 错误);
-    }
-  };
-
   useEffect(() => {
     获取游戏列表();
   }, [获取游戏列表]);
-
-  const 切换展开 = (游戏ID) => {
-    设置展开的游戏ID(展开的游戏ID === 游戏ID ? null : 游戏ID);
-  };
 
   const 处理创建游戏 = async (事件) => {
     事件.preventDefault();
@@ -100,35 +78,8 @@ const 状态管理 = () => {
     }
   };
 
-  const 处理创建项目 = async (事件) => {
-    事件.preventDefault();
-    const 表单数据 = new FormData(事件.target);
-    try {
-      await api.post(`/games/${选中的游戏.id}/projects`, {
-        name: 表单数据.get('name'),
-        description: 表单数据.get('description'),
-        price: parseFloat(表单数据.get('price')),
-        unit: 表单数据.get('unit'),
-        icon: 表单数据.get('icon') || '',
-        is_single_per_order: 表单数据.get('is_single_per_order') === 'on'
-      });
-      显示提示('项目创建成功！');
-      设置显示新建项目弹窗(false);
-      获取项目列表(选中的游戏.id);
-    } catch (错误) {
-      显示提示('创建项目失败', 'error');
-    }
-  };
-
-  const 处理删除项目 = async (游戏ID, 项目ID, 项目名称) => {
-    if (!window.confirm(`确定要删除项目「${项目名称}」？`)) return;
-    try {
-      await api.delete(`/games/${游戏ID}/projects/${项目ID}`);
-      显示提示(`项目「${项目名称}」已删除`);
-      获取项目列表(游戏ID);
-    } catch (错误) {
-      显示提示('删除项目失败', 'error');
-    }
+  const 跳转到项目管理 = (游戏) => {
+    navigate(`/admin/games/${游戏.id}`, { state: { 游戏 } });
   };
 
   return (
@@ -180,7 +131,7 @@ const 状态管理 = () => {
           <div className="games-grid">
             {游戏列表.map(游戏 => (
               <div key={游戏.id} className="game-card">
-                <div className="game-card-header">
+                <div className="game-card-header" style={{ cursor: 'pointer' }} onClick={() => 跳转到项目管理(游戏)}>
                   <div className="game-icon-wrap">
                     {游戏.icon ? (
                       <img src={游戏.icon} alt={游戏.name} className="game-icon" />
@@ -194,7 +145,7 @@ const 状态管理 = () => {
                     <h2 className="game-name">{游戏.name}</h2>
                     <span className="game-desc">{游戏.description || '暂无描述'}</span>
                   </div>
-                  <div className="game-actions">
+                  <div className="game-actions" onClick={e => e.stopPropagation()}>
                     <button
                       className="icon-btn-sm"
                       onClick={() => {
@@ -219,68 +170,15 @@ const 状态管理 = () => {
                       </svg>
                     </button>
                     <button
-                      className={`expand-btn ${展开的游戏ID === 游戏.id ? 'expanded' : ''}`}
-                      onClick={() => 切换展开(游戏.id)}
-                      title="展开项目"
+                      className="expand-btn expanded"
+                      onClick={() => 跳转到项目管理(游戏)}
+                      title="管理项目"
                     >
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="9 18 15 12 9 6" />
                       </svg>
                     </button>
                   </div>
-                </div>
-
-                <div className={`projects-section ${展开的游戏ID === 游戏.id ? 'open' : ''}`}>
-                  {项目映射[游戏.id] && 项目映射[游戏.id].length > 0 ? (
-                    <div className="projects-list">
-                      {项目映射[游戏.id].map(项目 => (
-                        <div key={项目.id} className="project-row">
-                          <div className="project-info">
-                            <span className="project-name">
-                              {项目.name}
-                              {项目.is_single_per_order && (
-                                <span className="single-badge">每单限购</span>
-                              )}
-                            </span>
-                            {项目.description && (
-                              <span className="project-desc">{项目.description}</span>
-                            )}
-                          </div>
-                          <div className="project-price">
-                            <span className="price-value">¥{项目.price}</span>
-                            <span className="price-unit">/{项目.unit || '次'}</span>
-                          </div>
-                          <button
-                            className="icon-btn-xs danger"
-                            onClick={() => 处理删除项目(游戏.id, 项目.id, 项目.name)}
-                            title="删除项目"
-                          >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                              <line x1="18" y1="6" x2="6" y2="18" />
-                              <line x1="6" y1="6" x2="18" y2="18" />
-                            </svg>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="no-projects">
-                      <span>暂无项目</span>
-                    </div>
-                  )}
-                  <button
-                    className="add-project-btn"
-                    onClick={() => {
-                      设置选中的游戏(游戏);
-                      设置显示新建项目弹窗(true);
-                    }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    添加项目
-                  </button>
                 </div>
               </div>
             ))}
@@ -356,60 +254,6 @@ const 状态管理 = () => {
         </div>
       )}
 
-      {/* 新建项目弹窗 */}
-      {显示新建项目弹窗 && 选中的游戏 && (
-        <div className="modal-overlay" onClick={() => 设置显示新建项目弹窗(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>为「{选中的游戏.name}」添加项目</h2>
-              <button className="close-btn" onClick={() => 设置显示新建项目弹窗(false)}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-            <form onSubmit={处理创建项目} className="modal-form">
-              <div className="form-group">
-                <label>项目名称</label>
-                <input name="name" placeholder="例如：排位上分" required />
-              </div>
-              <div className="form-group">
-                <label>项目描述</label>
-                <textarea name="description" placeholder="描述这个服务项目" rows="2" />
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>价格</label>
-                  <div className="input-with-suffix">
-                    <input name="price" type="number" step="0.01" min="0" placeholder="0.00" required />
-                    <span>¥</span>
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label>单位</label>
-                  <input name="unit" placeholder="例如：星、局、天" required />
-                </div>
-              </div>
-              <div className="form-group">
-                <label>图标链接（可选）</label>
-                <input name="icon" placeholder="输入图标 URL" />
-              </div>
-              <div className="form-group checkbox-group">
-                <label className="checkbox-label">
-                  <input name="is_single_per_order" type="checkbox" />
-                  <span className="checkbox-custom" />
-                  <span>每单限购一个</span>
-                </label>
-                <p className="checkbox-hint">开启后，每个订单中此项目只能下单一个</p>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="cancel-btn" onClick={() => 设置显示新建项目弹窗(false)}>取消</button>
-                <button type="submit" className="primary-btn">确认添加</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
