@@ -7,6 +7,12 @@
 # =============================================================================
 set -e
 
+# 传入：LC_ALL, LANG 环境变量
+# 作用：设置 UTF-8 语言环境以支持中文变量名
+# 传出：无返回值
+export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
+
 APP_DIR="/www/wwwroot/fashiye"
 LOG_FILE="${APP_DIR}/logs/auto_update.log"
 VENV_DIR="${APP_DIR}/venv"
