@@ -6,7 +6,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 // 传出：一个包含二维码的 Canvas DOM 元素
 import { QRCodeCanvas } from 'qrcode.react';
 import api from '../utils/api';
-import './PaymentPage.css';
+import styles from './PaymentPage.module.css';
 
 /**
  * 支付页面 - 使用 iaitouzi 聚合支付
@@ -26,6 +26,7 @@ const PaymentPage = () => {
   const [支付链接, set支付链接] = useState('');
   const [二维码图片, set二维码图片] = useState('');  // 后端从支付页面提取的真实二维码图片（base64 data URL）
   const [轮询中, set轮询中] = useState(false);
+  const [轮询超时, set轮询超时] = useState(false);
 
   useEffect(() => {
     /** 加载订单详情 */
@@ -53,10 +54,22 @@ const PaymentPage = () => {
     加载订单信息();
   }, [orderId]);
 
-  // 支付成功后轮询检测
+  // 支付成功后轮询检测（最多 5 分钟 = 100 次，每次间隔 3 秒）
+  // 传入：轮询中布尔值、订单ID
+  // 作用：每3秒查询一次支付状态，检测到已支付则停止并跳转
+  // 传出：到达最大轮询次数后停止，提示用户手动查询
   useEffect(() => {
     if (!轮询中 || !orderId) return;
+    let 剩余轮询次数 = 100;
+    set轮询超时(false);
     const 定时器 = setInterval(async () => {
+      剩余轮询次数 -= 1;
+      if (剩余轮询次数 <= 0) {
+        clearInterval(定时器);
+        set轮询中(false);
+        set轮询超时(true);
+        return;
+      }
       try {
         const 响应 = await api.get(`/payment/status/${orderId}`);
         const 记录列表 = 响应.data.data || [];
@@ -64,7 +77,9 @@ const PaymentPage = () => {
           clearInterval(定时器);
           set轮询中(false);
           set显示二维码弹窗(false);
-          navigate(`/user/orders/${orderId}`);
+          // 匿名用户跳转到公开订单详情页，登录用户跳转到个人订单页
+          const 是否有登录 = !!localStorage.getItem('token');
+          navigate(是否有登录 ? `/user/orders/${orderId}` : `/order-detail/${orderId}`);
         }
       } catch { /* 忽略轮询错误 */ }
     }, 3000);
@@ -122,18 +137,18 @@ const PaymentPage = () => {
 
   if (加载中) {
     return (
-      <div className="payment-container">
-        <div className="loading-state">加载中...</div>
+      <div className={styles.paymentContainer}>
+        <div className={styles.loadingState}>加载中...</div>
       </div>
     );
   }
 
   if (!订单信息) {
     return (
-      <div className="payment-container">
-        <div className="error-state">
+      <div className={styles.paymentContainer}>
+        <div className={styles.errorState}>
           <p>{错误信息 || '订单不存在'}</p>
-          <button onClick={() => navigate(-1)} className="back-btn">返回</button>
+          <button onClick={() => navigate(-1)} className={styles.backBtn}>返回</button>
         </div>
       </div>
     );
@@ -142,24 +157,24 @@ const PaymentPage = () => {
   const 允许支付状态 = ['pending', 'pending_review'];
 
   return (
-    <div className="payment-container">
+    <div className={styles.paymentContainer}>
       {/* 二维码支付弹窗 */}
       {显示二维码弹窗 && (
-        <div className="qr-overlay" onClick={关闭二维码弹窗}>
-          <div className="qr-modal" onClick={e => e.stopPropagation()}>
-            <div className="qr-header">
+        <div className={styles.qrOverlay} onClick={关闭二维码弹窗}>
+          <div className={styles.qrModal} onClick={e => e.stopPropagation()}>
+            <div className={styles.qrHeader}>
               <h2>扫码支付</h2>
-              <span className="qr-method-badge">
+              <span className={styles.qrMethodBadge}>
                 {支付方式 === 'alipay' ? '支付宝' : '微信支付'}
               </span>
-              <button className="qr-close-btn" onClick={关闭二维码弹窗}>✕</button>
+              <button className={styles.qrCloseBtn} onClick={关闭二维码弹窗}>✕</button>
             </div>
-            <div className="qr-body">
-              <p className="qr-amount">
+            <div className={styles.qrBody}>
+              <p className={styles.qrAmount}>
                 支付金额：<strong>¥{订单信息.totalAmount}</strong>
               </p>
-              <p className="qr-tip">请使用{支付方式 === 'alipay' ? '支付宝' : '微信'}扫码支付</p>
-              <div className="qr-code-container">
+              <p className={styles.qrTip}>请使用{支付方式 === 'alipay' ? '支付宝' : '微信'}扫码支付</p>
+              <div className={styles.qrCodeContainer}>
                 {二维码图片 ? (
                   // 后端从支付页面提取的真实二维码图片，直接展示
                   // 传入：src=base64 data URL, alt=支付二维码
@@ -168,7 +183,7 @@ const PaymentPage = () => {
                   <img
                     src={二维码图片}
                     alt="支付二维码"
-                    className="qr-code-image"
+                    className={styles.qrCodeImage}
                     style={{ width: 240, height: 240, objectFit: 'contain' }}
                   />
                 ) : (
@@ -179,16 +194,19 @@ const PaymentPage = () => {
                   <QRCodeCanvas value={支付链接} size={240} level="M" bgColor="#ffffff" fgColor="#000000" />
                 )}
               </div>
-              <p className="qr-hint">请截图或使用另一台设备扫码</p>
-              <p className="qr-status-text">
-                {轮询中 ? '等待扫码支付...' : '支付完成后请等待页面自动跳转'}
+              <p className={styles.qrHint}>请截图或使用另一台设备扫码</p>
+              <p className={styles.qrStatusText}>
+                {轮询超时 ? '⏱️ 支付超时，请重新尝试或联系客服' : (轮询中 ? '等待扫码支付...' : '支付完成后请等待页面自动跳转')}
               </p>
             </div>
-            <div className="qr-footer">
-              <button className="qr-paid-btn" onClick={() => navigate(`/user/orders/${orderId}`)}>
+            <div className={styles.qrFooter}>
+              <button className={styles.qrPaidBtn} onClick={() => {
+                const 是否有登录 = !!localStorage.getItem('token');
+                navigate(是否有登录 ? `/user/orders/${orderId}` : `/order-detail/${orderId}`);
+              }}>
                 我已支付完成
               </button>
-              <button className="qr-cancel-btn" onClick={关闭二维码弹窗}>
+              <button className={styles.qrCancelBtn} onClick={关闭二维码弹窗}>
                 取消支付
               </button>
             </div>
@@ -196,32 +214,32 @@ const PaymentPage = () => {
         </div>
       )}
 
-      <div className="payment-card">
-        <div className="payment-header">
-          <button onClick={() => navigate(-1)} className="back-btn">← 返回</button>
+      <div className={styles.paymentCard}>
+        <div className={styles.paymentHeader}>
+          <button onClick={() => navigate(-1)} className={styles.backBtn}>← 返回</button>
           <h1>订单支付</h1>
         </div>
 
         {/* 订单摘要 */}
-        <div className="order-summary">
-          <div className="summary-row">
-            <span className="summary-label">订单号</span>
-            <span className="summary-value order-no">{订单信息.orderNo}</span>
+        <div className={styles.orderSummary}>
+          <div className={styles.summaryRow}>
+            <span className={styles.summaryLabel}>订单号</span>
+            <span className={`${styles.summaryValue} ${styles.orderNo}`}>{订单信息.orderNo}</span>
           </div>
-          <div className="summary-row">
-            <span className="summary-label">游戏</span>
-            <span className="summary-value">{订单信息.gameName || '-'}</span>
+          <div className={styles.summaryRow}>
+            <span className={styles.summaryLabel}>游戏</span>
+            <span className={styles.summaryValue}>{订单信息.gameName || '-'}</span>
           </div>
-          <div className="summary-row total-row">
-            <span className="summary-label">支付金额</span>
-            <span className="summary-value price">¥{订单信息.totalAmount}</span>
+          <div className={`${styles.summaryRow} ${styles.totalRow}`}>
+            <span className={styles.summaryLabel}>支付金额</span>
+            <span className={`${styles.summaryValue} ${styles.price}`}>¥{订单信息.totalAmount}</span>
           </div>
         </div>
 
         {/* 支付方式选择 */}
-        <div className="payment-methods">
-          <h2 className="section-title">选择支付方式</h2>
-          <div className="method-options">
+        <div className={styles.paymentMethods}>
+          <h2 className={styles.sectionTitle}>选择支付方式</h2>
+          <div className={styles.methodOptions}>
             <label className={`method-option ${支付方式 === 'alipay' ? 'selected' : ''}`}>
               <input
                 type="radio"
@@ -230,13 +248,13 @@ const PaymentPage = () => {
                 checked={支付方式 === 'alipay'}
                 onChange={() => set支付方式('alipay')}
               />
-              <span className="method-icon alipay-icon">
+              <span className={`${styles.methodIcon} ${styles.alipayIcon}`}>
                 <svg viewBox="0 0 24 24" width="28" height="28" fill="none">
                   <rect width="24" height="24" rx="4" fill="#1677FF"/>
                   <text x="12" y="17" textAnchor="middle" fontSize="14" fontWeight="bold" fill="white">支</text>
                 </svg>
               </span>
-              <span className="method-name">支付宝</span>
+              <span className={styles.methodName}>支付宝</span>
             </label>
             <label className={`method-option ${支付方式 === 'wechat' ? 'selected' : ''}`}>
               <input
@@ -246,24 +264,24 @@ const PaymentPage = () => {
                 checked={支付方式 === 'wechat'}
                 onChange={() => set支付方式('wechat')}
               />
-              <span className="method-icon wechat-icon">
+              <span className={`${styles.methodIcon} ${styles.wechatIcon}`}>
                 <svg viewBox="0 0 24 24" width="28" height="28" fill="none">
                   <rect width="24" height="24" rx="4" fill="#07C160"/>
                   <text x="12" y="17" textAnchor="middle" fontSize="14" fontWeight="bold" fill="white">微</text>
                 </svg>
               </span>
-              <span className="method-name">微信支付</span>
+              <span className={styles.methodName}>微信支付</span>
             </label>
           </div>
         </div>
 
         {/* 联系方式 */}
-        <div className="contact-section">
-          <h2 className="section-title">联系方式</h2>
-          <p className="section-desc">用于支付后找回订单</p>
+        <div className={styles.contactSection}>
+          <h2 className={styles.sectionTitle}>联系方式</h2>
+          <p className={styles.sectionDesc}>用于支付后找回订单</p>
           <input
             type="text"
-            className="contact-input"
+            className={styles.contactInput}
             placeholder="请输入邮箱或手机号"
             value={联系方式}
             onChange={(e) => set联系方式(e.target.value)}
@@ -271,10 +289,10 @@ const PaymentPage = () => {
         </div>
 
         {/* 错误提示 */}
-        {错误信息 && <div className="payment-error">{错误信息}</div>}
+        {错误信息 && <div className={styles.paymentError}>{错误信息}</div>}
 
         {/* 操作按钮 */}
-        <div className="payment-actions">
+        <div className={styles.paymentActions}>
           {允许支付状态.includes(订单信息.status) ? (
             <button
               onClick={发起支付}
@@ -284,17 +302,17 @@ const PaymentPage = () => {
               {支付中 ? '正在获取支付二维码...' : `确认支付 ¥${订单信息.totalAmount}`}
             </button>
           ) : (
-            <div className="cannot-pay-notice">
+            <div className={styles.cannotPayNotice}>
               当前订单状态 ({订单信息.status}) 不允许支付
             </div>
           )}
-          <button onClick={() => navigate(`/user/orders/${orderId}`)} className="back-to-order-btn">
+          <button onClick={() => navigate(`/user/orders/${orderId}`)} className={styles.backToOrderBtn}>
             返回订单详情
           </button>
         </div>
 
         {/* 支付提示 */}
-        <div className="payment-tips">
+        <div className={styles.paymentTips}>
           <h3>支付说明</h3>
           <ul>
             <li>选择支付方式后，点击"确认支付"即可看到支付二维码</li>

@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.数据库.会话 import 获取数据库会话
 from app.模型.游戏 import 游戏表, 项目表
+from app.模型.订单 import 订单表
 from app.api.依赖.认证 import 要求角色
 from app.核心.异常 import 业务逻辑错误
 
@@ -132,13 +133,27 @@ async def 删除游戏接口(
     """
     管理员删除游戏及其所有项目。
     传入：game_id（路径参数，游戏ID）
-    作用：级联删除游戏及关联项目
+    作用：检查是否有订单关联，若无则级联删除游戏及关联项目
     传出：无数据
     """
     游戏结果 = await 数据库.execute(select(游戏表).where(游戏表.id == game_id))
     游戏 = 游戏结果.scalar_one_or_none()
     if not 游戏:
         raise 业务逻辑错误("游戏不存在")
+
+    # 调用库函数：查询关联订单
+    # 传入：select(订单表) 过滤条件(game_id匹配且状态不是已取消/已完成的活跃订单)
+    # 作用：检查该游戏是否有未完成的订单关联，防止因级联删除破坏数据完整性
+    # 传出：查询结果对象
+    关联订单查询 = select(订单表).where(
+        订单表.游戏ID == game_id,
+        ~订单表.状态.in_(["cancelled", "completed"])
+    )
+    关联订单结果 = await 数据库.execute(关联订单查询)
+    关联订单列表 = 关联订单结果.scalars().all()
+    if 关联订单列表:
+        raise 业务逻辑错误(f"该游戏下有 {len(关联订单列表)} 个进行中的订单，请先处理这些订单后再删除游戏")
+
     await 数据库.delete(游戏)
     await 数据库.commit()
     return {"code": 0, "data": None, "message": "游戏已删除"}

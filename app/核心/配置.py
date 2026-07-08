@@ -35,6 +35,8 @@ class Settings(BaseSettings):
     iaitouzi应用密钥: str = Field(alias="IAITOUZI_APP_SECRET")
     iaitouzi支付网关地址: str = Field("https://iaitouzi.com/core/api/request/pay/", alias="IAITOUZI_BASE_URL")
     iaitouzi异步通知地址: str = Field("http://localhost:8002/api/v1/payment/callback", alias="IAITOUZI_NOTIFY_URL")
+    # 前端基地址，用于支付成功后前端跳转默认地址
+    前端基地址: str = Field("http://localhost:5173", alias="FRONTEND_BASE_URL")
 
     # 日志记录设置
     日志级别: str = Field("INFO", alias="LOG_LEVEL")

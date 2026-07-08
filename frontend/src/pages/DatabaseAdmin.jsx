@@ -12,6 +12,24 @@ const DatabaseAdmin = () => {
   const [tableColumns, setTableColumns] = useState([]);
   const [dataLoading, setDataLoading] = useState(false);
 
+  // 生产环境守卫：通过环境变量 VITE_DISABLE_DATABASE_ADMIN 或 hostname 判断
+  // 传入：import.meta.env.DEV（Vite 环境变量，开发模式为 true）
+  // 作用：在非开发模式下阻止访问数据库管理页面，防止生产环境数据操作风险
+  // 传出：如果为非开发模式，显示警告页面而非正常内容
+  if (!import.meta.env.DEV) {
+    return (
+      <div className="dashboard-container admin-dashboard">
+        <main className="dashboard-content">
+          <div className="error-state" style={{ textAlign: 'center', padding: '80px 20px' }}>
+            <h2>🔒 此功能仅在开发环境可用</h2>
+            <p style={{ margin: '20px 0', color: '#666' }}>数据库管理组件包含直接操作数据的能力，在生产环境下已禁用。</p>
+            <button className="logout-btn" onClick={() => navigate('/admin')}>返回管理后台</button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   useEffect(() => {
     fetchTables();
   }, []);

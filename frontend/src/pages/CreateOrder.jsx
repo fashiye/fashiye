@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import './CreateOrder.css';
+import styles from './CreateOrder.module.css';
 
 const CreateOrder = () => {
   const navigate = useNavigate();
@@ -138,20 +138,20 @@ const CreateOrder = () => {
   };
 
   return (
-    <div className="create-order-container">
-      <div className="create-order-card">
-        <header className="create-order-header">
+    <div className={styles.createOrderContainer}>
+      <div className={styles.createOrderCard}>
+        <header className={styles.createOrderHeader}>
           <h1>发布订单</h1>
-          <button onClick={handleBack} className="back-btn">返回</button>
+          <button onClick={handleBack} className={styles.backBtn}>返回</button>
         </header>
 
-        {error && <div className="error-message">{error}</div>}
+        {error && <div className={styles.errorMessage}>{error}</div>}
 
-        <form onSubmit={handleSubmit} className="create-order-form">
-          <div className="form-section">
+        <form onSubmit={handleSubmit} className={styles.createOrderForm}>
+          <div className={styles.formSection}>
             <h2>基本信息</h2>
             
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label>选择游戏 *</label>
               <select
                 value={formData.gameId}
@@ -167,21 +167,21 @@ const CreateOrder = () => {
             </div>
           </div>
 
-          <div className="form-section">
+          <div className={styles.formSection}>
             <h2>项目列表 *</h2>
             
-            <div className="items-list">
-              <div className="items-header">
-                <span className="item-col">项目</span>
-                <span className="qty-col">数量</span>
-                <span className="price-col">单价</span>
-                <span className="total-col">小计</span>
-                <span className="action-col"></span>
+            <div className={styles.itemsList}>
+              <div className={styles.itemsHeader}>
+                <span className={styles.itemCol}>项目</span>
+                <span className={styles.qtyCol}>数量</span>
+                <span className={styles.priceCol}>单价</span>
+                <span className={styles.totalCol}>小计</span>
+                <span className={styles.actionCol}></span>
               </div>
               
               {items.map((item, index) => (
-                <div key={index} className="item-row">
-                  <div className="item-col">
+                <div key={index} className={styles.itemRow}>
+                  <div className={styles.itemCol}>
                     <select
                       value={item.projectId}
                       onChange={(e) => handleItemChange(index, 'projectId', e.target.value)}
@@ -197,7 +197,7 @@ const CreateOrder = () => {
                     </select>
                   </div>
                   
-                  <div className="qty-col">
+                  <div className={styles.qtyCol}>
                     <input
                       type="number"
                       min="1"
@@ -208,19 +208,19 @@ const CreateOrder = () => {
                     />
                   </div>
                   
-                  <div className="price-col">
+                  <div className={styles.priceCol}>
                     ¥{item.unitPrice.toFixed(2)}
                   </div>
                   
-                  <div className="total-col">
+                  <div className={styles.totalCol}>
                     ¥{(item.unitPrice * item.quantity).toFixed(2)}
                   </div>
                   
-                  <div className="action-col">
+                  <div className={styles.actionCol}>
                     <button
                       type="button"
                       onClick={() => handleRemoveItem(index)}
-                      className="remove-item-btn"
+                      className={styles.removeItemBtn}
                       disabled={isLoading || items.length <= 1}
                       title="删除"
                     >
@@ -234,22 +234,22 @@ const CreateOrder = () => {
             <button
               type="button"
               onClick={handleAddItem}
-              className="add-item-btn"
+              className={styles.addItemBtn}
               disabled={isLoading}
             >
               + 添加项目
             </button>
             
-            <div className="order-total">
+            <div className={styles.orderTotal}>
               <span>订单总额：</span>
-              <span className="total-amount">¥{calculateTotal().toFixed(2)}</span>
+              <span className={styles.totalAmount}>¥{calculateTotal().toFixed(2)}</span>
             </div>
           </div>
 
-          <div className="form-section">
+          <div className={styles.formSection}>
             <h2>账号信息</h2>
             
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label>游戏账号 *</label>
               <input
                 type="text"
@@ -261,7 +261,7 @@ const CreateOrder = () => {
               />
             </div>
 
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label>游戏密码 *</label>
               <input
                 type="text"
@@ -274,10 +274,10 @@ const CreateOrder = () => {
             </div>
           </div>
 
-          <div className="form-section">
+          <div className={styles.formSection}>
             <h2>其他要求</h2>
             
-            <div className="form-group">
+            <div className={styles.formGroup}>
               <label>特殊要求</label>
               <textarea
                 value={formData.requirements}
@@ -289,18 +289,18 @@ const CreateOrder = () => {
             </div>
           </div>
 
-          <div className="form-actions">
+          <div className={styles.formActions}>
             <button
               type="button"
               onClick={handleBack}
-              className="cancel-btn"
+              className={styles.cancelBtn}
               disabled={isLoading}
             >
               取消
             </button>
             <button
               type="submit"
-              className="submit-btn"
+              className={styles.submitBtn}
               disabled={isLoading}
             >
               {isLoading ? '发布中...' : '发布订单'}

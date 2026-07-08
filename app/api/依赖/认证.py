@@ -1,9 +1,7 @@
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.数据库.会话 import 获取数据库会话
-from app.核心.配置 import 配置对象
 from app.核心.安全 import 解码令牌
 from app.模型.用户 import 用户表, 打手表, 管理员表
 from app.核心.异常 import 认证错误
@@ -59,6 +57,14 @@ async def 获取当前用户(
     if not 用户 or 用户.状态 != 0:
         raise 认证错误("用户不存在或已被禁用")
 
+    # 验证管理员角色是否与数据库记录一致（防止角色变更后 JWT 过时）
+    if 角色 in ["super", "operator"]:
+        # 传入：用户对象的 role 属性（数据库实际角色）
+        # 作用：校验 JWT 中的角色与数据库中的真实角色是否一致，防止角色变更后仍持有旧权限
+        # 传出：不匹配时抛出认证错误
+        if 用户.角色 != 角色:
+            raise 认证错误("角色已变更，请重新登录")
+
     return 用户, 角色
 
 
@@ -70,12 +76,12 @@ def 要求角色(允许的角色列表: list):
         允许的角色列表: 允许通过的角色列表，如 ["super", "operator"]
 
     Returns:
-        依赖注入函数，返回 (user, role) 元组或抛出 403 异常
+        依赖注入函数，返回 (user, role) 元组或抛出认证错误
     """
     async def 角色校验(用户角色=Depends(获取当前用户)):
         用户, 角色 = 用户角色
         if 角色 not in 允许的角色列表:
-            raise HTTPException(status_code=403, detail="权限不足")
+            raise 认证错误("权限不足", 状态码=403)
         return 用户, 角色
     return 角色校验
 

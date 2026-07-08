@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import './AccountSettings.css';
+import styles from './AccountSettings.module.css';
 
 const AccountSettings = () => {
   const navigate = useNavigate();
@@ -26,8 +26,8 @@ const AccountSettings = () => {
     const 获取用户信息 = async () => {
       try {
         const res = await api.get('/users/me');
-        set用户信息(res.data);
-        set新昵称(res.data.username);
+        set用户信息(res.data.data);
+        set新昵称(res.data.data.username);
       } catch {
         set提示消息({ type: 'error', text: '获取用户信息失败' });
       } finally {
@@ -50,11 +50,17 @@ const AccountSettings = () => {
     if (昵称提交中) return;
     set昵称提交中(true);
     try {
-      const res = await api.put('/users/profile', { username: 新昵称.trim() });
-      set用户信息(res.data);
-      显示提示('success', '昵称修改成功');
-      set昵称弹窗(false);
-    } catch (err) {
+        await api.put('/users/profile', { username: 新昵称.trim() });
+        // 调用库函数：重新获取用户信息
+        // 传入：无参数
+        // 作用：从后端重新拉取最新用户数据，确保界面同步
+        // 传出：包含用户信息的响应对象
+        const 重新获取 = await api.get('/users/me');
+        set用户信息(重新获取.data.data);
+        set新昵称(重新获取.data.data.username);
+        显示提示('success', '昵称修改成功');
+        set昵称弹窗(false);
+      } catch (err) {
       const msg = err.response?.data?.message || '修改失败';
       显示提示('error', msg);
     } finally {
@@ -104,111 +110,119 @@ const AccountSettings = () => {
 
   if (加载中) {
     return (
-      <div className="account-container">
-        <div className="loading-spinner">加载中...</div>
+      <div className={styles.accountContainer}>
+        <div className={styles.loadingSpinner}>加载中...</div>
       </div>
     );
   }
 
   const 用户 = 用户信息;
 
+  if (!用户) {
+    return (
+      <div className={styles.accountContainer}>
+        <div className={styles.loadingSpinner}>用户信息加载中...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="account-container">
-      <header className="account-header">
-        <div className="header-left">
-          <button className="back-btn" onClick={返回仪表盘}>← 返回</button>
+    <div className={styles.accountContainer}>
+      <header className={styles.accountHeader}>
+        <div className={styles.headerLeft}>
+          <button className={styles.backBtn} onClick={返回仪表盘}>← 返回</button>
           <h1>账户管理</h1>
         </div>
-        <div className="header-right">
-          <button className="logout-btn" onClick={处理退出登录}>退出登录</button>
+        <div className={styles.headerRight}>
+          <button className={styles.logoutBtn} onClick={处理退出登录}>退出登录</button>
         </div>
       </header>
 
       {提示消息.text && (
-        <div className={`toast toast-${提示消息.type}`}>{提示消息.text}</div>
+        <div className={`${styles.toast} ${提示消息.type === 'success' ? styles.toastSuccess : styles.toastError}`}>{提示消息.text}</div>
       )}
 
-      <main className="account-content">
-        <div className="profile-card">
-          <div className="avatar-section">
-            <div className="avatar">
-              {用户.username.charAt(0).toUpperCase()}
+      <main className={styles.accountContent}>
+        <div className={styles.profileCard}>
+          <div className={styles.avatarSection}>
+            <div className={styles.avatar}>
+              {用户?.username?.charAt(0)?.toUpperCase() || '?'}
             </div>
-            <div className="user-basic">
+            <div className={styles.userBasic}>
               <h2>{用户.username}</h2>
-              <p className="email">{用户.email}</p>
-              {用户.phone && <p className="phone">{用户.phone}</p>}
-              <span className={`role-badge role-${用户.role}`}>
+              <p className={styles.email}>{用户.email}</p>
+              {用户.phone && <p className={styles.phone}>{用户.phone}</p>}
+              <span className={`${styles.roleBadge} ${用户.role === 'user' ? styles.roleUser : styles.roleHandler}`}>
                 {用户.role === 'user' ? '玩家' : 用户.role === 'handler' ? '打手' : '管理员'}
               </span>
             </div>
           </div>
         </div>
 
-        <div className="account-sections">
-          <div className="section-card">
-            <h3 className="section-title">基本资料</h3>
-            <div className="info-row">
-              <span className="info-label">昵称</span>
-              <div className="info-value">
+        <div className={styles.accountSections}>
+          <div className={styles.sectionCard}>
+            <h3 className={styles.sectionTitle}>基本资料</h3>
+            <div className={styles.infoRow}>
+              <span className={styles.infoLabel}>昵称</span>
+              <div className={styles.infoValue}>
                 <span>{用户.username}</span>
-                <button className="edit-btn" onClick={() => set昵称弹窗(true)}>修改</button>
+                <button className={styles.editBtn} onClick={() => set昵称弹窗(true)}>修改</button>
               </div>
             </div>
-            <div className="info-row">
-              <span className="info-label">邮箱</span>
-              <span className="info-value">{用户.email}</span>
+            <div className={styles.infoRow}>
+              <span className={styles.infoLabel}>邮箱</span>
+              <span className={styles.infoValue}>{用户.email}</span>
             </div>
             {用户.phone && (
-              <div className="info-row">
-                <span className="info-label">手机号</span>
-                <span className="info-value">{用户.phone}</span>
+              <div className={styles.infoRow}>
+                <span className={styles.infoLabel}>手机号</span>
+                <span className={styles.infoValue}>{用户.phone}</span>
               </div>
             )}
           </div>
 
           {用户.role === 'handler' && (
-            <div className="section-card">
-              <h3 className="section-title">打手信息</h3>
-              <div className="info-row">
-                <span className="info-label">打手等级</span>
-                <span className="info-value">
-                  <span className="level-stars">{'⭐'.repeat(用户.level || 1)}</span>
-                  <span className="level-number">Lv.{用户.level || 1}</span>
+            <div className={styles.sectionCard}>
+              <h3 className={styles.sectionTitle}>打手信息</h3>
+              <div className={styles.infoRow}>
+                <span className={styles.infoLabel}>打手等级</span>
+                <span className={styles.infoValue}>
+                  <span className={styles.levelStars}>{'⭐'.repeat(用户.level || 1)}</span>
+                  <span className={styles.levelNumber}>Lv.{用户.level || 1}</span>
                 </span>
               </div>
-              <div className="info-row">
-                <span className="info-label">完成率</span>
-                <span className="info-value">{用户.completion_rate || 0}%</span>
+              <div className={styles.infoRow}>
+                <span className={styles.infoLabel}>完成率</span>
+                <span className={styles.infoValue}>{用户.completion_rate || 0}%</span>
               </div>
-              <div className="info-row">
-                <span className="info-label">总订单数</span>
-                <span className="info-value">{用户.total_orders || 0}</span>
+              <div className={styles.infoRow}>
+                <span className={styles.infoLabel}>总订单数</span>
+                <span className={styles.infoValue}>{用户.total_orders || 0}</span>
               </div>
-              <div className="info-row">
-                <span className="info-label">余额</span>
-                <span className="info-value">{用户.balance || 0} 元</span>
+              <div className={styles.infoRow}>
+                <span className={styles.infoLabel}>累计收入</span>
+                <span className={styles.infoValue}>{用户.balance || 0} 元</span>
               </div>
             </div>
           )}
 
           {用户.role === 'user' && 用户.balance !== undefined && (
-            <div className="section-card">
-              <h3 className="section-title">账户信息</h3>
-              <div className="info-row">
-                <span className="info-label">余额</span>
-                <span className="info-value">{用户.balance || 0} 元</span>
+            <div className={styles.sectionCard}>
+              <h3 className={styles.sectionTitle}>账户信息</h3>
+              <div className={styles.infoRow}>
+                <span className={styles.infoLabel}>余额</span>
+                <span className={styles.infoValue}>{用户.balance || 0} 元</span>
               </div>
             </div>
           )}
 
-          <div className="section-card">
-            <h3 className="section-title">安全设置</h3>
-            <div className="info-row">
-              <span className="info-label">登录密码</span>
-              <div className="info-value">
+          <div className={styles.sectionCard}>
+            <h3 className={styles.sectionTitle}>安全设置</h3>
+            <div className={styles.infoRow}>
+              <span className={styles.infoLabel}>登录密码</span>
+              <div className={styles.infoValue}>
                 <span>••••••••</span>
-                <button className="edit-btn" onClick={() => set密码弹窗(true)}>修改</button>
+                <button className={styles.editBtn} onClick={() => set密码弹窗(true)}>修改</button>
               </div>
             </div>
           </div>
@@ -216,19 +230,19 @@ const AccountSettings = () => {
       </main>
 
       {昵称弹窗 && (
-        <div className="modal-overlay" onClick={() => set昵称弹窗(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">修改昵称</h3>
+        <div className={styles.modalOverlay} onClick={() => set昵称弹窗(false)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>修改昵称</h3>
             <input
-              className="modal-input"
+              className={styles.modalInput}
               value={新昵称}
               onChange={e => set新昵称(e.target.value)}
               placeholder="请输入新昵称"
             />
-            <div className="modal-actions">
-              <button className="modal-btn cancel" onClick={() => set昵称弹窗(false)}>取消</button>
+            <div className={styles.modalActions}>
+              <button className={`${styles.modalBtn} ${styles.cancel}`} onClick={() => set昵称弹窗(false)}>取消</button>
               <button
-                className={`modal-btn confirm ${昵称提交中 ? 'loading' : ''}`}
+                className={`${styles.modalBtn} ${styles.confirm} ${昵称提交中 ? styles.loading : ''}`}
                 onClick={处理修改昵称}
                 disabled={昵称提交中}
               >
@@ -240,34 +254,34 @@ const AccountSettings = () => {
       )}
 
       {密码弹窗 && (
-        <div className="modal-overlay" onClick={() => set密码弹窗(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">修改密码</h3>
+        <div className={styles.modalOverlay} onClick={() => set密码弹窗(false)}>
+          <div className={styles.modal} onClick={e => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>修改密码</h3>
             <input
-              className="modal-input"
+              className={styles.modalInput}
               type="password"
               value={旧密码}
               onChange={e => set旧密码(e.target.value)}
               placeholder="请输入旧密码"
             />
             <input
-              className="modal-input"
+              className={styles.modalInput}
               type="password"
               value={新密码}
               onChange={e => set新密码(e.target.value)}
               placeholder="请输入新密码（至少6位）"
             />
             <input
-              className="modal-input"
+              className={styles.modalInput}
               type="password"
               value={确认密码}
               onChange={e => set确认密码(e.target.value)}
               placeholder="请确认新密码"
             />
-            <div className="modal-actions">
-              <button className="modal-btn cancel" onClick={() => set密码弹窗(false)}>取消</button>
+            <div className={styles.modalActions}>
+              <button className={`${styles.modalBtn} ${styles.cancel}`} onClick={() => set密码弹窗(false)}>取消</button>
               <button
-                className={`modal-btn confirm ${密码提交中 ? 'loading' : ''}`}
+                className={`${styles.modalBtn} ${styles.confirm} ${密码提交中 ? styles.loading : ''}`}
                 onClick={处理修改密码}
                 disabled={密码提交中}
               >

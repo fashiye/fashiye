@@ -1,0 +1,460 @@
+/* 支付页面 - 玻璃态设计 */
+.payment-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 32px 20px;
+  min-height: 100vh;
+  position: relative;
+}
+
+.payment-container::before {
+  content: '';
+  position: fixed;
+  top: -20%;
+  left: -10%;
+  width: 60%;
+  height: 80%;
+  background: radial-gradient(ellipse, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.payment-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border-radius: 28px;
+  padding: 28px;
+  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  position: relative;
+  z-index: 1;
+}
+
+.payment-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(229, 231, 235, 0.6);
+}
+
+.payment-header h1 {
+  margin: 0;
+  font-size: 20px;
+  color: #1f2937;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.back-btn {
+  background: rgba(243, 244, 246, 0.8);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 40px;
+  cursor: pointer;
+  color: #4b5563;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.back-btn:hover {
+  background: #e5e7eb;
+  transform: translateY(-1px);
+}
+
+/* 订单摘要 */
+.order-summary {
+  background: rgba(249, 250, 251, 0.8);
+  border-radius: 20px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.summary-row + .summary-row {
+  border-top: 1px solid rgba(229, 231, 235, 0.6);
+}
+
+.summary-label {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.summary-value {
+  color: #1f2937;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.summary-value.order-no {
+  font-family: monospace;
+  color: #6366f1;
+}
+
+.total-row .price {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ef4444;
+}
+
+/* 支付方式 */
+.section-title {
+  font-size: 16px;
+  color: #1f2937;
+  margin: 0 0 12px;
+  font-weight: 700;
+}
+
+.section-desc {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: -8px 0 12px;
+}
+
+.payment-methods {
+  margin-bottom: 24px;
+}
+
+.method-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.method-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px;
+  border: 2px solid #e5e7eb;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.method-option:hover {
+  border-color: #818cf8;
+  background: rgba(245, 243, 255, 0.8);
+}
+
+.method-option.selected {
+  border-color: #6366f1;
+  background: rgba(238, 242, 255, 0.9);
+}
+
+.method-option input { display: none; }
+
+.method-icon {
+  font-size: 24px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(243, 244, 246, 0.8);
+  border-radius: 12px;
+}
+
+.method-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+/* 联系方式 */
+.contact-section {
+  margin-bottom: 24px;
+}
+
+.contact-input {
+  width: 100%;
+  padding: 12px 18px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 40px;
+  font-size: 15px;
+  outline: none;
+  transition: all 0.2s;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.contact-input:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.contact-input::placeholder { color: #9ca3af; }
+
+/* 错误提示 */
+.payment-error {
+  background: rgba(254, 242, 242, 0.9);
+  color: #dc2626;
+  padding: 12px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  border: 1px solid #fecaca;
+}
+
+/* 操作按钮 */
+.payment-actions {
+  margin-bottom: 24px;
+}
+
+.pay-btn {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border: none;
+  border-radius: 40px;
+  font-size: 17px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pay-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+}
+
+.pay-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.pay-btn.loading {
+  background: linear-gradient(135deg, #9ca3af, #6b7280);
+}
+
+.back-to-order-btn {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  background: rgba(243, 244, 246, 0.8);
+  color: #374151;
+  border: none;
+  border-radius: 40px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.back-to-order-btn:hover {
+  background: #e5e7eb;
+}
+
+.cannot-pay-notice {
+  text-align: center;
+  padding: 14px;
+  background: rgba(254, 243, 199, 0.9);
+  color: #92400e;
+  border-radius: 20px;
+  font-size: 14px;
+  border: 1px solid #fde68a;
+}
+
+/* 二维码弹窗 */
+.qr-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.qr-modal {
+  background: white;
+  border-radius: 32px;
+  width: 90%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 40px -12px rgba(0, 0, 0, 0.25);
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+.qr-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px 24px 0;
+  position: relative;
+}
+
+.qr-header h2 {
+  margin: 0;
+  font-size: 18px;
+  color: #1f2937;
+}
+
+.qr-method-badge {
+  font-size: 12px;
+  background: #eef2ff;
+  color: #6366f1;
+  padding: 2px 10px;
+  border-radius: 40px;
+  font-weight: 500;
+}
+
+.qr-close-btn {
+  position: absolute;
+  right: 20px;
+  top: 20px;
+  background: #f3f4f6;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 16px;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.qr-close-btn:hover {
+  background: #e5e7eb;
+  color: #1f2937;
+}
+
+.qr-body {
+  padding: 24px;
+  text-align: center;
+}
+
+.qr-amount {
+  font-size: 16px;
+  color: #374151;
+  margin: 0 0 4px;
+}
+
+.qr-amount strong {
+  font-size: 24px;
+  color: #ef4444;
+  margin-left: 4px;
+}
+
+.qr-tip {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 20px;
+}
+
+.qr-code-container {
+  width: 260px;
+  height: 260px;
+  margin: 0 auto;
+  border: 2px solid #e5e7eb;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  padding: 8px;
+}
+
+.qr-code-container canvas { display: block; max-width: 100%; height: auto; }
+
+.qr-hint, .qr-status-text {
+  font-size: 13px;
+  color: #9ca3af;
+  margin: 10px 0 0;
+}
+
+.qr-footer {
+  display: flex;
+  gap: 12px;
+  padding: 0 24px 24px;
+}
+
+.qr-paid-btn {
+  flex: 1;
+  padding: 12px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border: none;
+  border-radius: 40px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.qr-paid-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+}
+
+.qr-cancel-btn {
+  flex: 1;
+  padding: 12px;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 40px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.qr-cancel-btn:hover { background: #e5e7eb; }
+
+/* 支付说明 */
+.payment-tips {
+  background: rgba(240, 253, 244, 0.9);
+  border-radius: 20px;
+  padding: 16px;
+}
+
+.payment-tips h3 {
+  font-size: 14px;
+  color: #166534;
+  margin: 0 0 8px;
+}
+
+.payment-tips ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.payment-tips li {
+  font-size: 13px;
+  color: #15803d;
+  line-height: 1.8;
+}
+
+/* 加载/错误 */
+.loading-state,
+.error-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.error-state p { color: #dc2626; margin-bottom: 16px; }

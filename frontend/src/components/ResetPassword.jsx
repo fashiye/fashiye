@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../utils/api';
-import './ResetPassword.css';
+import 样式 from './ResetPassword.module.css';
 
 const PASSWORD_MIN_LENGTH = 6;
 
@@ -123,16 +123,15 @@ const ResetPassword = () => {
   const passwordStrength = getPasswordStrength(newPassword);
 
   return (
-    <div className="reset-password-container">
-      <div className="reset-password-card">
+    <div className={样式.resetPasswordContainer}>
+      <div className={样式.resetPasswordCard}>
         <h2>重置密码</h2>
-        <p className="subtitle">为账号 {email} 设置新密码</p>
+        <p className={样式.subtitle}>为账号 {邮箱} 设置新密码</p>
+        <form onSubmit={处理提交} className={样式.resetPasswordForm}>
+          {error && <div className={样式.errorMessage}>{error}</div>}
+          {success && <div className={样式.successMessage}>{success}</div>}
 
-        <form onSubmit={handleSubmit} className="reset-password-form">
-          {error && <div className="error-message">{error}</div>}
-          {success && <div className="success-message">{success}</div>}
-
-          <div className="input-group">
+          <div className={样式.inputGroup}>
             <label>验证码</label>
             <input
               type="text"
@@ -147,7 +146,7 @@ const ResetPassword = () => {
             />
           </div>
 
-          <div className="input-group">
+          <div className={样式.inputGroup}>
             <label>新密码</label>
             <input
               type="password"
@@ -159,10 +158,10 @@ const ResetPassword = () => {
               placeholder={`至少${PASSWORD_MIN_LENGTH}位，包含字母和数字`}
             />
             {newPassword && (
-              <div className="password-strength">
-                <div className="strength-bar">
+              <div className={样式.passwordStrength}>
+                <div className={样式.strengthBar}>
                   <div 
-                    className="strength-fill"
+                    className={样式.strengthFill}
                     style={{ 
                       width: `${(passwordStrength.level / 3) * 100}%`,
                       backgroundColor: passwordStrength.color 
@@ -176,7 +175,7 @@ const ResetPassword = () => {
             )}
           </div>
 
-          <div className="input-group">
+          <div className={样式.inputGroup}>
             <label>确认密码</label>
             <input
               type="password"
@@ -191,15 +190,15 @@ const ResetPassword = () => {
 
           <button 
             type="submit" 
-            className="submit-btn"
+            className={样式.submitBtn}
             disabled={isLoading}
           >
             {isLoading ? '重置中...' : '重置密码'}
           </button>
         </form>
 
-        <div className="back-link">
-          <button onClick={handleBackToLogin} className="link-btn">返回登录</button>
+        <div className={样式.backLink}>
+          <button onClick={handleBackToLogin} className={样式.linkBtn}>返回登录</button>
         </div>
       </div>
     </div>

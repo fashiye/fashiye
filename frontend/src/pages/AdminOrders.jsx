@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
-import './AdminDashboard.css';
+import 样式 from './AdminDashboard.module.css';
 
 const AdminOrders = () => {
   const [订单列表, set订单列表] = useState([]);
@@ -154,7 +154,7 @@ const AdminOrders = () => {
   };
 
   return (
-    <div className="dashboard-container admin-dashboard">
+    <div className={样式.dashboardContainer}>
       {/* 气泡提示 */}
       {提示.show && (
         <div style={{
@@ -171,18 +171,16 @@ const AdminOrders = () => {
         </div>
       )}
 
-      <header className="dashboard-header">
-        <div className="header-left">
+      <header className={样式.dashboardHeader}>
+        <div className={样式.headerLeft}>
           <h1>订单管理</h1>
         </div>
-        <div className="header-right">
-          <button className="logout-btn" onClick={() => window.history.back()}>
-            返回
-          </button>
+        <div className={样式.headerRight}>
+          <button className={样式.logoutBtn} onClick={() => window.history.back()}>返回</button>
         </div>
       </header>
 
-      <main className="dashboard-content">
+      <main className={样式.dashboardContent}>
         <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ color: '#666', fontSize: '14px' }}>
             共 {总条数} 条记录
@@ -206,10 +204,10 @@ const AdminOrders = () => {
         </div>
 
         {加载中 ? (
-          <div className="loading">加载中...</div>
+          <div className={样式.loading}>加载中...</div>
         ) : (
-          <div className="orders-list">
-            <table className="data-table">
+          <div className={样式.ordersList}>
+            <table className={样式.dataTable}>
               <thead>
                 <tr>
                   {isSuperAdmin && (

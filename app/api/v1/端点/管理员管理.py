@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from typing import Optional, List
+from pydantic import BaseModel, Field
 
 from app.数据库.会话 import 获取数据库会话
 from app.api.依赖.认证 import 获取当前用户, 要求角色
@@ -13,6 +14,54 @@ from app.模型.用户 import 用户表, 打手表, 管理员表
 from app.核心.异常 import 业务逻辑错误
 from app.核心.安全 import 生成密码哈希
 from app.模型.用户 import 管理员权限表
+from app.模型.订单 import 订单表
+
+# ── Pydantic 请求模型（替代裸 dict，提供输入验证） ──────────────
+class 更新用户状态请求(BaseModel):
+    """管理员更新用户状态的请求体"""
+    status: int = Field(..., ge=0, le=1, description="状态: 1-正常, 0-禁用")
+
+
+class 更新打手状态请求(BaseModel):
+    """管理员更新打手状态的请求体"""
+    status: Optional[int] = Field(None, ge=0, le=1, description="状态: 1-正常, 0-禁用")
+    reviewStatus: Optional[str] = Field(None, description="审核状态: pending/approved/rejected")
+
+
+class 更新管理员角色请求(BaseModel):
+    """超级管理员修改管理员角色的请求体"""
+    role: str = Field(..., description="角色: super/operator")
+
+
+class 创建管理员请求(BaseModel):
+    """超级管理员创建管理员账号的请求体"""
+    username: str = Field(..., min_length=2, max_length=50, description="用户名")
+    email: str = Field(..., description="邮箱")
+    password: str = Field(..., min_length=6, description="密码（至少6位）")
+    permissions: list[str] = Field(default_factory=list, description="权限键列表")
+
+
+class 更新管理员权限请求(BaseModel):
+    """更新管理员权限列表的请求体"""
+    permissions: list[str] = Field(..., description="权限键列表")
+
+
+class 调整打手等级请求(BaseModel):
+    """调整打手等级的请求体"""
+    level: int = Field(..., ge=1, le=100, description="等级（1-100）")
+
+
+# 系统预定义合法权限键白名单
+合法权限键集合: set[str] = {
+    "orders:read", "orders:write", "orders:delete",
+    "users:read", "users:write",
+    "handlers:read", "handlers:write",
+    "admins:read", "admins:write",
+    "settings:read", "settings:write",
+    "finance:read", "finance:write",
+    "system:admin",
+}
+
 
 router = APIRouter()
 
@@ -166,7 +215,8 @@ async def 获取管理员列表接口(
 @router.put("/admin/users/{user_id}/status")
 async def 更新用户状态接口(
     user_id: int,
-    状态数据: dict,
+    # 传入：含 status（0或1）的请求体
+    状态数据: 更新用户状态请求,
     数据库: AsyncSession = Depends(获取数据库会话),
     当前用户信息: tuple = Depends(要求角色(["super", "operator"]))
 ):
@@ -174,10 +224,9 @@ async def 更新用户状态接口(
     用户结果 = await 数据库.execute(select(用户表).where(用户表.id == user_id))
     用户 = 用户结果.scalar_one_or_none()
     if not 用户:
-        raise HTTPException(status_code=404, detail="用户不存在")
+        raise 业务逻辑错误("用户不存在")
 
-    if "status" in 状态数据:
-        用户.状态 = 状态数据["status"]
+    用户.状态 = 状态数据.status
 
     await 数据库.commit()
     return {"code": 0, "data": None, "message": "用户状态更新成功"}
@@ -186,7 +235,8 @@ async def 更新用户状态接口(
 @router.put("/admin/handlers/{handler_id}/status")
 async def 更新打手状态接口(
     handler_id: int,
-    状态数据: dict,
+    # 传入：含 status/ reviewStatus 的请求体
+    状态数据: 更新打手状态请求,
     数据库: AsyncSession = Depends(获取数据库会话),
     当前用户信息: tuple = Depends(要求角色(["super", "operator"]))
 ):
@@ -194,12 +244,14 @@ async def 更新打手状态接口(
     打手结果 = await 数据库.execute(select(打手表).where(打手表.id == handler_id))
     打手 = 打手结果.scalar_one_or_none()
     if not 打手:
-        raise HTTPException(status_code=404, detail="打手不存在")
+        raise 业务逻辑错误("打手不存在")
 
-    if "status" in 状态数据:
-        打手.状态 = 状态数据["status"]
-    if "reviewStatus" in 状态数据:
-        打手.审核状态 = 状态数据["reviewStatus"]
+    if 状态数据.status is not None:
+        打手.状态 = 状态数据.status
+    if 状态数据.reviewStatus is not None:
+        if 状态数据.reviewStatus not in ("pending", "approved", "rejected"):
+            raise 业务逻辑错误("无效的审核状态")
+        打手.审核状态 = 状态数据.reviewStatus
 
     await 数据库.commit()
     return {"code": 0, "data": None, "message": "打手状态更新成功"}
@@ -208,7 +260,8 @@ async def 更新打手状态接口(
 @router.put("/admin/admins/{admin_id}/role")
 async def 更新管理员角色接口(
     admin_id: int,
-    角色数据: dict,
+    # 传入：含 role（super/operator）的请求体
+    角色数据: 更新管理员角色请求,
     数据库: AsyncSession = Depends(获取数据库会话),
     当前用户信息: tuple = Depends(要求角色(["super"]))
 ):
@@ -216,20 +269,11 @@ async def 更新管理员角色接口(
     管理员结果 = await 数据库.execute(select(管理员表).where(管理员表.id == admin_id))
     管理员 = 管理员结果.scalar_one_or_none()
     if not 管理员:
-        raise HTTPException(status_code=404, detail="管理员不存在")
+        raise 业务逻辑错误("管理员不存在")
 
-    if "role" in 角色数据:
-        新角色 = 角色数据["role"]
-        if 新角色 not in ["super", "operator"]:
-            raise 业务逻辑错误("无效的管理员角色")
-        管理员.角色 = 新角色
-
-    if "permissions" in 角色数据:
-        from app.模型.用户 import 管理员权限表
-        权限列表 = 角色数据["permissions"]
-        await 数据库.execute(select(管理员权限表).where(管理员权限表.管理员ID == admin_id))
-        # 简化处理：直接更新权限
-        pass
+    if 角色数据.role not in ("super", "operator"):
+        raise 业务逻辑错误("无效的管理员角色")
+    管理员.角色 = 角色数据.role
 
     await 数据库.commit()
     return {"code": 0, "data": None, "message": "管理员角色更新成功"}
@@ -241,11 +285,22 @@ async def 删除用户接口(
     数据库: AsyncSession = Depends(获取数据库会话),
     当前用户信息: tuple = Depends(要求角色(["super"]))
 ):
-    """超级管理员删除用户账号"""
+    """超级管理员删除用户账号（检查是否有关联订单）"""
+    # 调用库函数：查询用户是否存在
+    # 传入：user_id(路径参数)
+    # 作用：在 users 表中查找指定 ID 的用户记录
+    # 传出：用户表 ORM 对象或 None
     用户结果 = await 数据库.execute(select(用户表).where(用户表.id == user_id))
     用户 = 用户结果.scalar_one_or_none()
     if not 用户:
-        raise HTTPException(status_code=404, detail="用户不存在")
+        raise 业务逻辑错误("用户不存在")
+
+    # 检查用户是否有关联订单，防止外键约束错误
+    订单查询 = select(func.count(订单表.id)).where(订单表.用户ID == user_id)
+    订单结果 = await 数据库.execute(订单查询)
+    订单数量 = 订单结果.scalar()
+    if 订单数量 and 订单数量 > 0:
+        raise 业务逻辑错误(f"该用户存在 {订单数量} 个订单，请先处理关联订单再删除")
 
     await 数据库.delete(用户)
     await 数据库.commit()
@@ -282,7 +337,7 @@ async def 创建零元测试订单接口(
             },
             "message": "零元测试订单创建成功",
         }
-    except ValueError as e:
+    except Exception as e:
         raise 业务逻辑错误(str(e))
 
 
@@ -291,7 +346,8 @@ async def 创建零元测试订单接口(
 
 @router.post("/admin/admins")
 async def 创建管理员接口(
-    创建数据: dict,
+    # 传入：含 username, email, password, permissions（可选权限键列表）的请求体
+    创建数据: 创建管理员请求,
     数据库: AsyncSession = Depends(获取数据库会话),
     当前用户信息: tuple = Depends(要求角色(["super"]))
 ):
@@ -303,26 +359,27 @@ async def 创建管理员接口(
     """
     from sqlalchemy import func
     # 检查用户名和邮箱是否已存在
-    用户名检查 = await 数据库.execute(select(管理员表).where(管理员表.用户名 == 创建数据.get("username")))
+    用户名检查 = await 数据库.execute(select(管理员表).where(管理员表.用户名 == 创建数据.username))
     if 用户名检查.scalar_one_or_none():
         raise 业务逻辑错误("用户名已存在")
-    邮箱检查 = await 数据库.execute(select(管理员表).where(管理员表.邮箱 == 创建数据.get("email")))
+    邮箱检查 = await 数据库.execute(select(管理员表).where(管理员表.邮箱 == 创建数据.email))
     if 邮箱检查.scalar_one_or_none():
         raise 业务逻辑错误("邮箱已存在")
 
     新管理员 = 管理员表(
-        用户名=创建数据["username"],
-        邮箱=创建数据["email"],
-        密码哈希=生成密码哈希(创建数据["password"]),
+        用户名=创建数据.username,
+        邮箱=创建数据.email,
+        密码哈希=生成密码哈希(创建数据.password),
         角色="operator",
         状态=0
     )
     数据库.add(新管理员)
     await 数据库.flush()
 
-    # 同步写入权限
-    权限键列表: list = 创建数据.get("permissions") or []
-    for 权限键 in 权限键列表:
+    # 同步写入权限（校验白名单）
+    for 权限键 in 创建数据.permissions:
+        if 权限键 not in 合法权限键集合:
+            raise 业务逻辑错误(f"非法的权限键: {权限键}")
         数据库.add(管理员权限表(管理员ID=新管理员.id, 权限键=权限键))
 
     await 数据库.commit()
@@ -346,11 +403,12 @@ async def 删除管理员接口(
     作用：删除管理员记录（级联删除关联权限）
     传出：无数据
     """
+    当前管理员, _ = 当前用户信息
     管理员结果 = await 数据库.execute(select(管理员表).where(管理员表.id == admin_id))
     管理员 = 管理员结果.scalar_one_or_none()
     if not 管理员:
         raise 业务逻辑错误("管理员不存在")
-    if 管理员.用户名 == 当前用户信息[0].get("username") or 管理员.角色 == "super":
+    if 管理员.id == 当前管理员.id or 管理员.角色 == "super":
         raise 业务逻辑错误("不能删除超级管理员或自身")
     await 数据库.delete(管理员)
     await 数据库.commit()
@@ -382,14 +440,15 @@ async def 获取管理员权限接口(
 @router.put("/admin/admins/{admin_id}/permissions")
 async def 更新管理员权限接口(
     admin_id: int,
-    权限数据: dict,
+    # 传入：含 permissions（权限键列表）的请求体
+    权限数据: 更新管理员权限请求,
     数据库: AsyncSession = Depends(获取数据库会话),
     当前用户信息: tuple = Depends(要求角色(["super"]))
 ):
     """
     更新指定管理员的权限列表。
     传入：管理员ID（路径参数），权限数据含 permissions（权限键列表）
-    作用：先删除原有权限再批量插入新权限
+    作用：先校验权限键合法性，再删除原有权限，再批量插入新权限（同一事务）
     传出：无数据
     """
     管理员结果 = await 数据库.execute(select(管理员表).where(管理员表.id == admin_id))
@@ -399,18 +458,27 @@ async def 更新管理员权限接口(
     if 管理员.角色 == "super":
         raise 业务逻辑错误("超级管理员无需设置权限")
 
-    # 删除原有权限
-    原权限删除 = select(管理员权限表).where(管理员权限表.管理员ID == admin_id)
-    原权限结果 = await 数据库.execute(原权限删除)
-    for p in 原权限结果.scalars().all():
-        await 数据库.delete(p)
+    # 校验所有权限键是否合法
+    for 权限键 in 权限数据.permissions:
+        if 权限键 not in 合法权限键集合:
+            raise 业务逻辑错误(f"非法的权限键: {权限键}")
 
-    # 插入新权限
-    新权限列表: list = 权限数据.get("permissions") or []
-    for 权限键 in 新权限列表:
-        数据库.add(管理员权限表(管理员ID=admin_id, 权限键=权限键))
+    try:
+        # 删除原有权限
+        原权限查询 = select(管理员权限表).where(管理员权限表.管理员ID == admin_id)
+        原权限结果 = await 数据库.execute(原权限查询)
+        for p in 原权限结果.scalars().all():
+            await 数据库.delete(p)
 
-    await 数据库.commit()
+        # 插入新权限
+        for 权限键 in 权限数据.permissions:
+            数据库.add(管理员权限表(管理员ID=admin_id, 权限键=权限键))
+
+        await 数据库.commit()
+    except Exception as e:
+        await 数据库.rollback()
+        raise 业务逻辑错误(f"权限更新失败: {e}")
+
     return {"code": 0, "data": None, "message": "权限更新成功"}
 
 
@@ -464,13 +532,14 @@ async def 审核拒绝打手接口(
 @router.put("/admin/handlers/{handler_id}/level")
 async def 调整打手等级接口(
     handler_id: int,
-    等级数据: dict,
+    # 传入：含 level（1-100）的请求体
+    等级数据: 调整打手等级请求,
     数据库: AsyncSession = Depends(获取数据库会话),
     当前用户信息: tuple = Depends(要求角色(["super", "operator"]))
 ):
     """
     管理员调整打手等级。
-    传入：打手ID（路径参数），等级数据含 level（新等级数值）
+    传入：打手ID（路径参数），等级数据含 level（新等级数值，1-100）
     作用：更新打手等级字段
     传出：无数据
     """
@@ -478,9 +547,6 @@ async def 调整打手等级接口(
     打手 = 打手结果.scalar_one_or_none()
     if not 打手:
         raise 业务逻辑错误("打手不存在")
-    新等级 = 等级数据.get("level")
-    if not 新等级 or not isinstance(新等级, int) or 新等级 < 1:
-        raise 业务逻辑错误("无效的等级值")
-    打手.等级 = 新等级
+    打手.等级 = 等级数据.level
     await 数据库.commit()
     return {"code": 0, "data": None, "message": "打手等级已更新"}

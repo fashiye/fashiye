@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import './AdminOrderReview.css';
+import 样式 from './AdminOrderReview.module.css';
 
 const AdminOrderReview = () => {
   const navigate = useNavigate();
@@ -81,82 +81,78 @@ const AdminOrderReview = () => {
   };
 
   return (
-    <div className="admin-order-review-container">
-      <div className="admin-order-review-content">
-        <header className="admin-order-review-header">
+    <div className={样式.adminOrderReviewContainer}>
+      <div className={样式.adminOrderReviewContent}>
+        <header className={样式.adminOrderReviewHeader}>
           <h1>订单审核</h1>
-          <button onClick={handleBack} className="back-btn">返回</button>
+          <button onClick={handleBack} className={样式.backBtn}>返回</button>
         </header>
 
-        {error && <div className="error-message">{error}</div>}
-
-        {isLoading && orders.length === 0 ? (
-          <div className="loading-state">加载中...</div>
+        {error && <div className={样式.errorMessage}>{error}</div>}
+        {isLoading ? (
+          <div className={样式.loadingState}>加载中...</div>
         ) : orders.length === 0 ? (
-          <div className="empty-state">
+          <div className={样式.emptyState}>
             <p>暂无待审核订单</p>
           </div>
         ) : (
-          <div className="orders-list">
+          <div className={样式.ordersList}>
             {orders.map(order => (
-              <div key={order.id} className="order-card">
-                <div className="order-header">
-                  <div className="order-title">
+              <div key={order.id} className={样式.orderCard}>
+                <div className={样式.orderHeader}>
+                  <div className={样式.orderTitle}>
                     <h3>订单号：{order.orderNo}</h3>
-                    <span className="status-badge status-pending-review">
+                    <span className={`${样式.statusBadge} ${样式.statusPendingReview}`}>
                       待审核
                     </span>
                   </div>
-                  <div className="order-date">
+                  <div className={样式.orderDate}>
                     {new Date(order.createdAt).toLocaleString('zh-CN')}
                   </div>
                 </div>
                 
-                <div className="order-body">
-                  <div className="order-info">
-                    <span className="info-label">发单人：</span>
-                    <span className="info-value">{order.userName || `用户#${order.userId}`}</span>
+                <div className={样式.orderBody}>
+                  <div className={样式.orderInfo}>
+                    <span className={样式.infoLabel}>发单人：</span>
+                    <span className={样式.infoValue}>{order.userName || `用户#${order.userId}`}</span>
                   </div>
-                  
-                  <div className="order-info">
-                    <span className="info-label">游戏：</span>
-                    <span className="info-value">{order.gameName || '自定义游戏'}</span>
+                  <div className={样式.orderInfo}>
+                    <span className={样式.infoLabel}>游戏：</span>
+                    <span className={样式.infoValue}>{order.gameName || '自定义游戏'}</span>
                   </div>
-                  
-                  <div className="order-info">
-                    <span className="info-label">项目：</span>
-                    <span className="info-value item-summary">{getItemSummary(order)}</span>
+                  <div className={样式.orderInfo}>
+                    <span className={样式.infoLabel}>项目：</span>
+                    <span className={样式.infoValue}>{getItemSummary(order)}</span>
                   </div>
-                  
-                  <div className="order-info">
-                    <span className="info-label">金额：</span>
-                    <span className="info-value price">¥{order.totalAmount}</span>
+                  <div className={样式.orderInfo}>
+                    <span className={样式.infoLabel}>金额：</span>
+                    <span className={`${样式.infoValue} ${样式.price}`}>¥{order.totalAmount}</span>
                   </div>
                   
                   {order.requirements && (
-                    <div className="order-info">
-                      <span className="info-label">要求：</span>
-                      <span className="info-value">{order.requirements}</span>
+                    <div className={样式.orderInfo}>
+                      <span className={样式.infoLabel}>要求：</span>
+                      <span className={样式.infoValue}>{order.requirements}</span>
                     </div>
                   )}
                 </div>
                 
-                <div className="order-actions">
+                <div className={样式.orderActions}>
                   <button
                     onClick={() => handleViewOrder(order.id)}
-                    className="view-btn"
+                    className={样式.viewBtn}
                   >
                     查看详情
                   </button>
                   <button
                     onClick={() => handleApprove(order.id)}
-                    className="approve-btn"
+                    className={样式.approveBtn}
                   >
                     批准
                   </button>
                   <button
                     onClick={() => handleReject(order.id)}
-                    className="reject-btn"
+                    className={样式.rejectBtn}
                   >
                     拒绝
                   </button>
@@ -166,19 +162,19 @@ const AdminOrderReview = () => {
           </div>
         )}
 
-        <div className="pagination">
+        <div className={样式.pagination}>
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1 || isLoading}
-            className="page-btn"
+            className={样式.pageBtn}
           >
             上一页
           </button>
-          <span className="page-info">第 {page} 页</span>
+          <span className={样式.pageInfo}>第 {page} 页</span>
           <button
             onClick={() => setPage(p => p + 1)}
             disabled={orders.length < 20 || isLoading}
-            className="page-btn"
+            className={样式.pageBtn}
           >
             下一页
           </button>

@@ -1,39 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import './AdminDashboard.css';
+import 样式 from './AdminDashboard.module.css';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const [当前用户, set当前用户] = useState(null);
-  const [我的权限, set我的权限] = useState([]);
 
   useEffect(() => {
+    const 获取当前用户 = async () => {
+      try {
+        const 响应 = await api.get('/users/me');
+        const 用户数据 = 响应.data.data;
+        set当前用户(用户数据);
+      } catch (错误) {
+        console.error('获取用户信息失败:', 错误);
+      }
+    };
     获取当前用户();
   }, []);
-
-  const 获取当前用户 = async () => {
-    try {
-      const 响应 = await api.get('/users/me');
-      const 用户数据 = 响应.data.data;
-      set当前用户(用户数据);
-      if (用户数据.role === 'operator') {
-        const 权限响应 = await api.get(`/admin/admins/${用户数据.id}/permissions`);
-        set我的权限(权限响应.data.data.permissions || []);
-      }
-    } catch (错误) {
-      console.error('获取用户信息失败:', 错误);
-    }
-  };
 
   const 处理退出登录 = () => {
     localStorage.clear();
     window.dispatchEvent(new Event('auth-change'));
     navigate('/');
-  };
-
-  const 有权限 = (权限键) => {
-    return true;
   };
 
   const 是否超级管理员 = 当前用户?.role === 'super';
@@ -54,9 +44,9 @@ const AdminDashboard = () => {
   ];
 
   return (
-    <div className="dashboard-container admin-dashboard">
-      <header className="dashboard-header">
-        <div className="header-left">
+    <div className={样式.dashboardContainer}>
+      <header className={样式.dashboardHeader}>
+        <div className={样式.headerLeft}>
           <h1>管理中心</h1>
           <span style={{
             marginLeft: '15px', padding: '3px 10px', borderRadius: '4px', fontSize: '13px',
@@ -66,7 +56,7 @@ const AdminDashboard = () => {
             {是否超级管理员 ? '超级管理员' : '普通管理员'}
           </span>
         </div>
-        <div className="header-right">
+        <div className={样式.headerRight}>
           <button
             onClick={() => navigate(`/admin/account`)}
             style={{
@@ -76,18 +66,18 @@ const AdminDashboard = () => {
           >
             账户管理
           </button>
-          <button className="logout-btn" onClick={处理退出登录}>退出登录</button>
+          <button className={样式.logoutBtn} onClick={处理退出登录}>退出登录</button>
         </div>
       </header>
 
-      <main className="dashboard-content">
-        <div className="dashboard-grid">
+      <main className={样式.dashboardContent}>
+        <div className={样式.dashboardGrid}>
           {菜单卡片.map(卡片 => (
-            <div className="dashboard-card" key={卡片.key}>
+            <div className={样式.dashboardCard} key={卡片.key}>
               <h3>{卡片.标题}</h3>
               <p>{卡片.描述}</p>
               <button
-                className="card-btn"
+                className={样式.cardBtn}
                 onClick={() => navigate(卡片.路径)}
                 style={{ backgroundColor: 卡片.颜色, color: 'white' }}
               >

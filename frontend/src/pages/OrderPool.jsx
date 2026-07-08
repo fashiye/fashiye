@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import './OrderPool.css';
+import styles from './OrderPool.module.css';
 
 const OrderPool = () => {
   const navigate = useNavigate();
@@ -64,15 +64,15 @@ const OrderPool = () => {
   };
 
   return (
-    <div className="order-pool-container">
-      <div className="order-pool-content">
-        <header className="order-pool-header">
+    <div className={styles.orderPoolContainer}>
+      <div className={styles.orderPoolContent}>
+        <header className={styles.orderPoolHeader}>
           <h1>订单池</h1>
-          <button onClick={handleBack} className="back-btn">返回</button>
+          <button onClick={handleBack} className={styles.backBtn}>返回</button>
         </header>
 
-        <div className="filter-section">
-          <div className="filter-group">
+        <div className={styles.filterSection}>
+          <div className={styles.filterGroup}>
             <label>筛选游戏：</label>
             <select
               value={selectedGame}
@@ -90,51 +90,51 @@ const OrderPool = () => {
         </div>
 
         {isLoading && orders.length === 0 ? (
-          <div className="loading-state">加载中...</div>
+          <div className={styles.loadingState}>加载中...</div>
         ) : orders.length === 0 ? (
-          <div className="empty-state">
+          <div className={styles.emptyState}>
             <p>暂无可接订单</p>
             <p>请稍后再来查看</p>
           </div>
         ) : (
-          <div className="orders-list">
+          <div className={styles.ordersList}>
             {orders.map(order => (
-              <div key={order.id} className="order-card">
-                <div className="order-header">
+              <div key={order.id} className={styles.orderCard}>
+                <div className={styles.orderHeader}>
                   <h3>{order.gameName}</h3>
-                  <span className="order-no">订单号：{order.orderNo}</span>
+                  <span className={styles.orderNo}>订单号：{order.orderNo}</span>
                 </div>
                 
-                <div className="order-body">
-                  <div className="order-info">
-                    <span className="info-label">项目：</span>
-                    <span className="info-value item-summary">{order.itemSummary}</span>
+                <div className={styles.orderBody}>
+                  <div className={styles.orderInfo}>
+                    <span className={styles.infoLabel}>项目：</span>
+                    <span className={`${styles.infoValue} ${styles.itemSummary}`}>{order.itemSummary}</span>
                   </div>
                   
-                  <div className="order-info">
-                    <span className="info-label">金额：</span>
-                    <span className="info-value price">¥{order.totalAmount}</span>
+                  <div className={styles.orderInfo}>
+                    <span className={styles.infoLabel}>金额：</span>
+                    <span className={`${styles.infoValue} ${styles.price}`}>¥{order.totalAmount}</span>
                   </div>
                   
                   {order.requirements && (
-                    <div className="order-info">
-                      <span className="info-label">要求：</span>
-                      <span className="info-value">{order.requirements}</span>
+                    <div className={styles.orderInfo}>
+                      <span className={styles.infoLabel}>要求：</span>
+                      <span className={styles.infoValue}>{order.requirements}</span>
                     </div>
                   )}
                   
-                  <div className="order-info">
-                    <span className="info-label">发布时间：</span>
-                    <span className="info-value">
+                  <div className={styles.orderInfo}>
+                    <span className={styles.infoLabel}>发布时间：</span>
+                    <span className={styles.infoValue}>
                       {new Date(order.createdAt).toLocaleString('zh-CN')}
                     </span>
                   </div>
                 </div>
                 
-                <div className="order-actions">
+                <div className={styles.orderActions}>
                   <button
                     onClick={() => handleAcceptOrder(order.id)}
-                    className="accept-btn"
+                    className={styles.acceptBtn}
                   >
                     接单
                   </button>
@@ -144,19 +144,19 @@ const OrderPool = () => {
           </div>
         )}
 
-        <div className="pagination">
+        <div className={styles.pagination}>
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1 || isLoading}
-            className="page-btn"
+            className={styles.pageBtn}
           >
             上一页
           </button>
-          <span className="page-info">第 {page} 页</span>
+          <span className={styles.pageInfo}>第 {page} 页</span>
           <button
             onClick={() => setPage(p => p + 1)}
             disabled={orders.length < 20 || isLoading}
-            className="page-btn"
+            className={styles.pageBtn}
           >
             下一页
           </button>

@@ -7,6 +7,7 @@ from app.数据库.会话 import 获取数据库会话
 from app.api.依赖.认证 import 获取当前用户, 要求角色
 from app.模式.用户 import 用户信息响应
 from app.模型.用户 import 用户表, 打手表, 管理员表
+from app.模型.订单 import 订单表
 from app.核心.异常 import 业务逻辑错误
 
 router = APIRouter()
@@ -98,8 +99,28 @@ async def 获取当前用户信息接口(
         )
         打手 = 打手结果.scalar_one_or_none()
         响应数据["level"] = 打手.等级 if 打手 else None
-        响应数据["completionRate"] = None
-        响应数据["totalOrders"] = 0
+        响应数据["completion_rate"] = None
+        # 调用库函数：统计打手完成的订单总数
+        # 传入：select(func.count(订单表.id)) 聚合查询，过滤 handler_id 匹配且状态为 completed
+        # 作用：统计该打手已完成订单数量
+        # 传出：聚合结果（int）
+        订单数查询 = select(func.count(订单表.id)).where(
+            订单表.打手ID == 当前用户.id,
+            订单表.状态 == "completed"
+        )
+        订单数结果 = await 数据库.execute(订单数查询)
+        响应数据["total_orders"] = 订单数结果.scalar() or 0
+        # 调用库函数：统计打手累计收入
+        # 传入：select(func.sum(订单表.总金额)) 聚合查询，过滤 handler_id 匹配且状态为 completed
+        # 作用：从 orders 表汇总该打手所有已完成订单的总金额
+        # 传出：聚合结果（Decimal 或 None）
+        收入查询 = select(func.sum(订单表.总金额)).where(
+            订单表.打手ID == 当前用户.id,
+            订单表.状态 == "completed"
+        )
+        收入结果 = await 数据库.execute(收入查询)
+        累计收入 = 收入结果.scalar()
+        响应数据["balance"] = float(累计收入) if 累计收入 else 0.0
 
     return {"code": 0, "data": 响应数据, "message": "获取用户信息成功"}
 

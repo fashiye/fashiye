@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../utils/api';
-import './AdminDashboard.css';
+import 样式 from './AdminDashboard.module.css';
 
 const AdminUsers = () => {
   const [用户列表, set用户列表] = useState([]);
@@ -158,7 +158,7 @@ const AdminUsers = () => {
   };
 
   return (
-    <div className="dashboard-container admin-dashboard">
+    <div className={样式.dashboardContainer}>
       {/* 气泡提示 */}
       {提示.show && (
         <div style={{
@@ -174,16 +174,16 @@ const AdminUsers = () => {
         </div>
       )}
 
-      <header className="dashboard-header">
-        <div className="header-left">
+      <header className={样式.dashboardHeader}>
+        <div className={样式.headerLeft}>
           <h1>用户管理</h1>
         </div>
-        <div className="header-right">
-          <button className="logout-btn" onClick={() => window.history.back()}>返回</button>
+        <div className={样式.headerRight}>
+          <button className={样式.logoutBtn} onClick={() => window.history.back()}>返回</button>
         </div>
       </header>
 
-      <main className="dashboard-content">
+      <main className={样式.dashboardContent}>
         <div style={{ marginBottom: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ color: '#666', fontSize: '14px' }}>
             共 {总条数} 条记录
@@ -218,10 +218,10 @@ const AdminUsers = () => {
         </div>
 
         {加载中 ? (
-          <div className="loading">加载中...</div>
+          <div className={样式.loading}>加载中...</div>
         ) : (
-          <div className="users-list">
-            <table className="data-table">
+          <div className={样式.usersList}>
+            <table className={样式.dataTable}>
               <thead>
                 <tr>
                   <th style={{ width: '40px' }}>

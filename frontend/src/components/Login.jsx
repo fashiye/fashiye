@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import './Login.css';
+import 样式 from './Login.module.css';
 
 const AUTH_CHANGE_EVENT = 'auth:changed';
 
@@ -113,16 +113,15 @@ const Login = () => {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-card">
+    <div className={样式.loginContainer}>
+      <div className={样式.loginCard}>
         <h2>游戏代练交易平台</h2>
-        <p className="subtitle">请选择角色并登录</p>
-
-        <div className="role-selector">
+        <p className={样式.subtitle}>请选择角色并登录</p>
+        <div className={样式.roleSelector}>
           {roles.map((roleOption) => (
             <button
               key={roleOption.value}
-              className={`role-btn ${role === roleOption.value ? 'active' : ''}`}
+              className={`${样式.roleBtn} ${role === roleOption.value ? 样式.active : ''}`}
               onClick={() => setRole(roleOption.value)}
             >
               {roleOption.label}
@@ -130,10 +129,10 @@ const Login = () => {
           ))}
         </div>
 
-        <form onSubmit={handleLogin} className="login-form">
-          {error && <div className="error-message">{error}</div>}
+        <form onSubmit={handleLogin} className={样式.loginForm}>
+          {error && <div className={样式.errorMessage}>{error}</div>}
 
-          <div className="input-group">
+          <div className={样式.inputGroup}>
             <label>邮箱</label>
             <input
               type="email"
@@ -146,7 +145,7 @@ const Login = () => {
             />
           </div>
 
-          <div className="input-group">
+          <div className={样式.inputGroup}>
             <label>密码</label>
             <input
               type="password"
@@ -161,18 +160,17 @@ const Login = () => {
 
           <button
             type="submit"
-            className="login-btn"
+            className={样式.loginBtn}
             disabled={isLoading}
           >
             {isLoading ? '登录中...' : '登录'}
           </button>
         </form>
 
-        <div className="register-link">
+        <div className={样式.registerLink}>
           还没有账号？ <a href="/register">立即注册</a>
         </div>
-
-        <div className="forgot-password-link">
+        <div className={样式.forgotPasswordLink}>
           <a href="/forgot-password">忘记密码？</a>
         </div>
       </div>

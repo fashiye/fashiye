@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import './MyOrders.css';
+import styles from './MyOrders.module.css';
 
 const MyOrders = () => {
   const navigate = useNavigate();
@@ -177,15 +177,15 @@ const MyOrders = () => {
   };
 
   return (
-    <div className="my-orders-container">
-      <div className="my-orders-content">
-        <header className="my-orders-header">
+    <div className={styles.myOrdersContainer}>
+      <div className={styles.myOrdersContent}>
+        <header className={styles.myOrdersHeader}>
           <h1>我的订单</h1>
-          <button onClick={handleBack} className="back-btn">返回</button>
+          <button onClick={handleBack} className={styles.backBtn}>返回</button>
         </header>
 
-        <div className="filter-section">
-          <div className="filter-group">
+        <div className={styles.filterSection}>
+          <div className={styles.filterGroup}>
             <label>状态筛选：</label>
             <select
               value={filter}
@@ -209,70 +209,70 @@ const MyOrders = () => {
         </div>
 
         {isLoading && orders.length === 0 ? (
-          <div className="loading-state">加载中...</div>
+          <div className={styles.loadingState}>加载中...</div>
         ) : orders.length === 0 ? (
-          <div className="empty-state">
+          <div className={styles.emptyState}>
             <p>暂无订单</p>
             <p>发布您的第一个订单吧</p>
           </div>
         ) : (
-          <div className="orders-list">
+          <div className={styles.ordersList}>
             {orders.map(order => (
-              <div key={order.id} className="order-card">
-                <div className="order-header">
-                  <div className="order-title">
+              <div key={order.id} className={styles.orderCard}>
+                <div className={styles.orderHeader}>
+                  <div className={styles.orderTitle}>
                     <h3>订单号：{order.orderNo}</h3>
-                    <span className={`status-badge ${getStatusClass(order.status)}`}>
+                    <span className={`${styles.statusBadge} ${styles[getStatusClass(order.status)]}`}>
                       {getStatusText(order.status)}
                     </span>
                   </div>
-                  <div className="order-date">
+                  <div className={styles.orderDate}>
                     {new Date(order.createdAt).toLocaleString('zh-CN')}
                   </div>
                 </div>
                 
-                <div className="order-body">
-                  <div className="order-info">
-                    <span className="info-label">游戏：</span>
-                    <span className="info-value">{order.gameName || '自定义游戏'}</span>
+                <div className={styles.orderBody}>
+                  <div className={styles.orderInfo}>
+                    <span className={styles.infoLabel}>游戏：</span>
+                    <span className={styles.infoValue}>{order.gameName || '自定义游戏'}</span>
                   </div>
                   
-                  <div className="order-info">
-                    <span className="info-label">项目：</span>
-                    <span className="info-value item-summary">{getItemSummary(order)}</span>
+                  <div className={styles.orderInfo}>
+                    <span className={styles.infoLabel}>项目：</span>
+                    <span className={`${styles.infoValue} ${styles.itemSummary}`}>{getItemSummary(order)}</span>
                   </div>
                   
-                  <div className="order-info">
-                    <span className="info-label">金额：</span>
-                    <span className="info-value price">¥{order.totalAmount}</span>
+                  <div className={styles.orderInfo}>
+                    <span className={styles.infoLabel}>金额：</span>
+                    <span className={`${styles.infoValue} ${styles.price}`}>¥{order.totalAmount}</span>
                   </div>
                   
                   {order.requirements && (
-                    <div className="order-info">
-                      <span className="info-label">要求：</span>
-                      <span className="info-value">{order.requirements}</span>
+                    <div className={styles.orderInfo}>
+                      <span className={styles.infoLabel}>要求：</span>
+                      <span className={styles.infoValue}>{order.requirements}</span>
                     </div>
                   )}
                   
                   {order.handlerId && (
-                    <div className="order-info">
-                      <span className="info-label">打手ID：</span>
-                      <span className="info-value">#{order.handlerId}</span>
+                    <div className={styles.orderInfo}>
+                      <span className={styles.infoLabel}>打手ID：</span>
+                      <span className={styles.infoValue}>#{order.handlerId}</span>
                     </div>
                   )}
                 </div>
                 
-                <div className="order-actions">
+                <div className={styles.orderActions}>
                   <button
                     onClick={() => handleViewOrder(order.id)}
-                    className="view-btn"
+                    className={styles.viewBtn}
                   >
                     查看详情
                   </button>
                   {userRole === 'user' && order.status === 'pending' && (
                     <button
                       onClick={() => handleCancelOrder(order.id)}
-                      className="cancel-btn"
+                      className={styles.cancelBtn}
                     >
                       取消订单
                     </button>
@@ -280,7 +280,7 @@ const MyOrders = () => {
                   {userRole === 'handler' && order.status === 'accepted' && (
                     <button
                       onClick={() => handleStartOrder(order.id)}
-                      className="accept-btn"
+                      className={styles.acceptBtn}
                     >
                       开始执行
                     </button>
@@ -288,7 +288,7 @@ const MyOrders = () => {
                   {userRole === 'handler' && order.status === 'in_progress' && (
                     <button
                       onClick={() => handleSubmitComplete(order.id)}
-                      className="complete-btn"
+                      className={styles.completeBtn}
                     >
                       提交完成
                     </button>
@@ -296,7 +296,7 @@ const MyOrders = () => {
                   {userRole === 'handler' && order.status === 'in_progress' && (
                     <button
                       onClick={() => handleReportAbnormal(order.id)}
-                      className="abnormal-btn"
+                      className={styles.abnormalBtn}
                     >
                       提交异常
                     </button>
@@ -307,19 +307,19 @@ const MyOrders = () => {
           </div>
         )}
 
-        <div className="pagination">
+        <div className={styles.pagination}>
           <button
             onClick={() => setPage(p => Math.max(1, p - 1))}
             disabled={page === 1 || isLoading}
-            className="page-btn"
+            className={styles.pageBtn}
           >
             上一页
           </button>
-          <span className="page-info">第 {page} 页</span>
+          <span className={styles.pageInfo}>第 {page} 页</span>
           <button
             onClick={() => setPage(p => p + 1)}
             disabled={orders.length < 20 || isLoading}
-            className="page-btn"
+            className={styles.pageBtn}
           >
             下一页
           </button>
@@ -327,20 +327,20 @@ const MyOrders = () => {
       </div>
 
       {异常弹窗 && (
-        <div className="modal-overlay" onClick={() => set异常弹窗(false)}>
-          <div className="abnormal-modal" onClick={e => e.stopPropagation()}>
-            <h3 className="modal-title">提交异常报告</h3>
-            <p className="modal-desc">请描述订单执行过程中遇到的问题：</p>
+        <div className={styles.modalOverlay} onClick={() => set异常弹窗(false)}>
+          <div className={styles.abnormalModal} onClick={e => e.stopPropagation()}>
+            <h3 className={styles.modalTitle}>提交异常报告</h3>
+            <p className={styles.modalDesc}>请描述订单执行过程中遇到的问题：</p>
             <textarea
-              className="modal-textarea"
+              className={styles.modalTextarea}
               value={异常原因}
               onChange={e => set异常原因(e.target.value)}
               placeholder="请输入异常原因..."
               rows={4}
             />
-            <div className="modal-actions">
-              <button className="modal-btn cancel" onClick={() => set异常弹窗(false)}>取消</button>
-              <button className="modal-btn confirm abnormal" onClick={handleSubmitAbnormal}>提交异常</button>
+            <div className={styles.modalActions}>
+              <button className={`${styles.modalBtn} ${styles.cancel}`} onClick={() => set异常弹窗(false)}>取消</button>
+              <button className={`${styles.modalBtn} ${styles.confirm} ${styles.abnormal}`} onClick={handleSubmitAbnormal}>提交异常</button>
             </div>
           </div>
         </div>

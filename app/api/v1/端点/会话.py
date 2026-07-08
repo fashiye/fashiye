@@ -23,7 +23,9 @@ async def 获取会话列表接口(
     当前用户, 当前角色 = 当前用户信息
     会话列表 = await 消息服务.获取会话列表(数据库, 当前角色, 当前用户.id)
 
-    结果列表 = []
+    # ── 批量加载对方用户名（消除 N+1） ──────────────
+    对方ID_按类型: dict[str, list[int]] = {"user": [], "handler": []}
+    会话_对方信息: list[tuple] = []  # (会话, 对方类型, 对方ID)
     for 会话 in 会话列表:
         if 会话.参与方A类型 == 当前角色 and 会话.参与方AID == 当前用户.id:
             对方类型 = 会话.参与方B类型
@@ -31,20 +33,40 @@ async def 获取会话列表接口(
         else:
             对方类型 = 会话.参与方A类型
             对方ID = 会话.参与方AID
+        对方ID_按类型.setdefault(对方类型, []).append(对方ID)
+        会话_对方信息.append((会话, 对方类型, 对方ID))
 
-        对方用户名 = "未知"
-        if 对方类型 == "user":
-            用户结果 = await 数据库.execute(select(用户表).where(用户表.id == 对方ID))
-            用户 = 用户结果.scalar_one_or_none()
-            if 用户:
-                对方用户名 = 用户.用户名
-        elif 对方类型 == "handler":
-            打手结果 = await 数据库.execute(select(打手表).where(打手表.id == 对方ID))
-            打手 = 打手结果.scalar_one_or_none()
-            if 打手:
-                对方用户名 = 打手.用户名
+    # 批量查询用户用户名
+    用户名映射: dict[int, str] = {}
+    if "user" in 对方ID_按类型:
+        # 调用库函数：批量查用户
+        # 传入：用户ID列表
+        # 作用：一次性查所有用户信息
+        # 传出：用户表 ORM 对象列表
+        用户结果 = await 数据库.execute(select(用户表).where(用户表.id.in_(对方ID_按类型["user"])))
+        for u in 用户结果.scalars().all():
+            用户名映射[u.id] = u.用户名
 
-        未读数量 = await 消息服务.获取未读数量(数据库, 会话.id, 当前角色, 当前用户.id)
+    # 批量查询打手用户名
+    if "handler" in 对方ID_按类型:
+        打手结果 = await 数据库.execute(select(打手表).where(打手表.id.in_(对方ID_按类型["handler"])))
+        for h in 打手结果.scalars().all():
+            用户名映射[h.id] = h.用户名
+
+    # ── 批量查询未读数（消除 N+1） ──────────────
+    所有会话IDs = [会话.id for 会话, _, _ in 会话_对方信息]
+    # 调用批量方法：一次查询所有未读数
+    # 传入：会话ID列表、当前角色、当前用户ID
+    # 作用：按会话分组统计未读消息数量
+    # 传出：{会话ID: 未读数量} 字典
+    未读数量映射: dict[int, int] = await 消息服务.批量获取未读数量(
+        数据库, 所有会话IDs, 当前角色, 当前用户.id
+    )
+
+    结果列表 = []
+    for 会话, 对方类型, 对方ID in 会话_对方信息:
+        对方用户名 = 用户名映射.get(对方ID, "未知")
+        未读数量 = 未读数量映射.get(会话.id, 0)
 
         结果列表.append(会话响应(
             id=会话.id,

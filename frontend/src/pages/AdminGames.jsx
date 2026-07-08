@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import './AdminGames.css';
+import 样式 from './AdminGames.module.css';  // 使用 CSS Modules 玻璃态样式
 
 const 状态管理 = () => {
   const navigate = useNavigate();
@@ -83,20 +83,20 @@ const 状态管理 = () => {
   };
 
   return (
-    <div className="games-page">
-      <header className="games-header">
-        <div className="header-left">
-          <button className="icon-btn" onClick={() => window.history.back()} title="返回">
+    <div className={样式.gamesPage}>
+      <header className={样式.gamesHeader}>
+        <div className={样式.headerLeft}>
+          <button className={样式.iconBtn} onClick={() => window.history.back()} title="返回">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
           <div>
             <h1>游戏管理</h1>
-            <p className="header-subtitle">管理游戏及其服务项目</p>
+            <p className={样式.headerSubtitle}>管理游戏及其服务项目</p>
           </div>
         </div>
-        <button className="primary-btn" onClick={() => 设置显示新建游戏弹窗(true)}>
+        <button className={样式.primaryBtn} onClick={() => 设置显示新建游戏弹窗(true)}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="12" y1="5" x2="12" y2="19" />
             <line x1="5" y1="12" x2="19" y2="12" />
@@ -105,20 +105,20 @@ const 状态管理 = () => {
         </button>
       </header>
 
-      <main className="games-main">
+      <main className={样式.gamesMain}>
         {提示信息 && (
-          <div className={`toast toast-${提示信息.类型}`}>
+          <div className={`${样式.toast} ${提示信息.类型 === 'success' ? 样式.toastSuccess : 样式.toastError}`}>
             <span>{提示信息.消息}</span>
           </div>
         )}
 
         {加载中 ? (
-          <div className="loading-state">
-            <div className="spinner" />
+          <div className={样式.loadingState}>
+            <div className={样式.spinner} />
             <p>加载中...</p>
           </div>
         ) : 游戏列表.length === 0 ? (
-          <div className="empty-state">
+          <div className={样式.emptyState}>
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
               <line x1="8" y1="21" x2="16" y2="21" />
@@ -128,26 +128,26 @@ const 状态管理 = () => {
             <p>点击上方按钮添加第一个游戏</p>
           </div>
         ) : (
-          <div className="games-grid">
+          <div className={样式.gamesGrid}>
             {游戏列表.map(游戏 => (
-              <div key={游戏.id} className="game-card">
-                <div className="game-card-header" style={{ cursor: 'pointer' }} onClick={() => 跳转到项目管理(游戏)}>
-                  <div className="game-icon-wrap">
+              <div key={游戏.id} className={样式.gameCard}>
+                <div className={样式.gameCardHeader} style={{ cursor: 'pointer' }} onClick={() => 跳转到项目管理(游戏)}>
+                  <div className={样式.gameIconWrap}>
                     {游戏.icon ? (
-                      <img src={游戏.icon} alt={游戏.name} className="game-icon" />
+                      <img src={游戏.icon} alt={游戏.name} className={样式.gameIcon} />
                     ) : (
-                      <div className="game-icon-placeholder">
+                      <div className={样式.gameIconPlaceholder}>
                         {游戏.name.charAt(0)}
                       </div>
                     )}
                   </div>
-                  <div className="game-meta">
-                    <h2 className="game-name">{游戏.name}</h2>
-                    <span className="game-desc">{游戏.description || '暂无描述'}</span>
+                  <div className={样式.gameMeta}>
+                    <h2 className={样式.gameName}>{游戏.name}</h2>
+                    <span className={样式.gameDesc}>{游戏.description || '暂无描述'}</span>
                   </div>
-                  <div className="game-actions" onClick={e => e.stopPropagation()}>
+                  <div className={样式.gameActions} onClick={e => e.stopPropagation()}>
                     <button
-                      className="icon-btn-sm"
+                      className={样式.iconBtnSm}
                       onClick={() => {
                         设置编辑中的游戏(游戏);
                         设置显示编辑游戏弹窗(true);
@@ -160,7 +160,7 @@ const 状态管理 = () => {
                       </svg>
                     </button>
                     <button
-                      className="icon-btn-sm danger"
+                      className={样式.danger}
                       onClick={() => 处理删除游戏(游戏.id, 游戏.name)}
                       title="删除游戏"
                     >
@@ -170,7 +170,7 @@ const 状态管理 = () => {
                       </svg>
                     </button>
                     <button
-                      className="expand-btn expanded"
+                      className={`${样式.expandBtn} ${样式.expanded}`}
                       onClick={() => 跳转到项目管理(游戏)}
                       title="管理项目"
                     >
@@ -188,32 +188,32 @@ const 状态管理 = () => {
 
       {/* 新建游戏弹窗 */}
       {显示新建游戏弹窗 && (
-        <div className="modal-overlay" onClick={() => 设置显示新建游戏弹窗(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className={样式.modalOverlay} onClick={() => 设置显示新建游戏弹窗(false)}>
+          <div className={样式.modalContent} onClick={e => e.stopPropagation()}>
+            <div className={样式.modalHeader}>
               <h2>添加新游戏</h2>
-              <button className="close-btn" onClick={() => 设置显示新建游戏弹窗(false)}>
+              <button className={样式.closeBtn} onClick={() => 设置显示新建游戏弹窗(false)}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             </div>
-            <form onSubmit={处理创建游戏} className="modal-form">
-              <div className="form-group">
+            <form onSubmit={处理创建游戏} className={样式.modalForm}>
+              <div className={样式.formGroup}>
                 <label>游戏名称</label>
                 <input name="name" placeholder="例如：王者荣耀" required />
               </div>
-              <div className="form-group">
+              <div className={样式.formGroup}>
                 <label>游戏描述</label>
                 <textarea name="description" placeholder="简要描述这个游戏" rows="3" />
               </div>
-              <div className="form-group">
+              <div className={样式.formGroup}>
                 <label>图标链接（可选）</label>
                 <input name="icon" placeholder="输入图标 URL" />
               </div>
-              <div className="modal-footer">
-                <button type="button" className="cancel-btn" onClick={() => 设置显示新建游戏弹窗(false)}>取消</button>
-                <button type="submit" className="primary-btn">确认创建</button>
+              <div className={样式.modalFooter}>
+                <button type="button" className={样式.cancelBtn} onClick={() => 设置显示新建游戏弹窗(false)}>取消</button>
+                <button type="submit" className={样式.primaryBtn}>确认创建</button>
               </div>
             </form>
           </div>
@@ -222,32 +222,32 @@ const 状态管理 = () => {
 
       {/* 编辑游戏弹窗 */}
       {显示编辑游戏弹窗 && 编辑中的游戏 && (
-        <div className="modal-overlay" onClick={() => 设置显示编辑游戏弹窗(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className={样式.modalOverlay} onClick={() => 设置显示编辑游戏弹窗(false)}>
+          <div className={样式.modalContent} onClick={e => e.stopPropagation()}>
+            <div className={样式.modalHeader}>
               <h2>编辑游戏</h2>
-              <button className="close-btn" onClick={() => 设置显示编辑游戏弹窗(false)}>
+              <button className={样式.closeBtn} onClick={() => 设置显示编辑游戏弹窗(false)}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             </div>
-            <form onSubmit={处理编辑游戏} className="modal-form">
-              <div className="form-group">
+            <form onSubmit={处理编辑游戏} className={样式.modalForm}>
+              <div className={样式.formGroup}>
                 <label>游戏名称</label>
                 <input name="name" defaultValue={编辑中的游戏.name} placeholder="例如：王者荣耀" required />
               </div>
-              <div className="form-group">
+              <div className={样式.formGroup}>
                 <label>游戏描述</label>
                 <textarea name="description" defaultValue={编辑中的游戏.description} placeholder="简要描述这个游戏" rows="3" />
               </div>
-              <div className="form-group">
+              <div className={样式.formGroup}>
                 <label>图标链接（可选）</label>
                 <input name="icon" defaultValue={编辑中的游戏.icon || ''} placeholder="输入图标 URL" />
               </div>
-              <div className="modal-footer">
-                <button type="button" className="cancel-btn" onClick={() => 设置显示编辑游戏弹窗(false)}>取消</button>
-                <button type="submit" className="primary-btn">保存修改</button>
+              <div className={样式.modalFooter}>
+                <button type="button" className={样式.cancelBtn} onClick={() => 设置显示编辑游戏弹窗(false)}>取消</button>
+                <button type="submit" className={样式.primaryBtn}>保存修改</button>
               </div>
             </form>
           </div>

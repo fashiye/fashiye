@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import api from '../utils/api';
-import './AdminGames.css';
+import 样式 from './AdminGameProjects.module.css';  // 使用 CSS Modules 玻璃态样式
 
 const AdminGameProjects = () => {
   const { gameId } = useParams();
@@ -65,7 +65,7 @@ const AdminGameProjects = () => {
       显示提示('项目创建成功！');
       设置显示新建项目弹窗(false);
       获取项目列表();
-    } catch (错误) {
+    } catch {
       显示提示('创建项目失败', 'error');
     }
   };
@@ -76,36 +76,36 @@ const AdminGameProjects = () => {
       await api.delete(`/games/${gameId}/projects/${项目ID}`);
       显示提示(`项目「${项目名称}」已删除`);
       获取项目列表();
-    } catch (错误) {
+    } catch {
       显示提示('删除项目失败', 'error');
     }
   };
 
   return (
-    <div className="games-page">
-      <header className="games-header">
-        <div className="header-left">
-          <button className="icon-btn" onClick={() => navigate('/admin/games')} title="返回游戏列表">
+    <div className={样式.gamesPage}>
+      <header className={样式.gamesHeader}>
+        <div className={样式.headerLeft}>
+          <button className={样式.iconBtn} onClick={() => navigate('/admin/games')} title="返回游戏列表">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6" />
             </svg>
           </button>
           <div>
             <h1>{游戏信息?.name || '加载中...'}</h1>
-            <p className="header-subtitle">
+            <p className={样式.headerSubtitle}>
               {游戏信息?.description || '项目管理'} — 共 {项目列表.length} 个项目
             </p>
           </div>
         </div>
-        <div className="header-right" style={{ display: 'flex', gap: '10px' }}>
+        <div className={样式.headerRight} style={{ display: 'flex', gap: '10px' }}>
           <button
-            className="primary-btn"
+            className={样式.primaryBtn}
             onClick={() => navigate('/admin/games')}
             style={{ background: 'rgba(255,255,255,0.2)', color: 'white', boxShadow: 'none' }}
           >
             返回游戏列表
           </button>
-          <button className="primary-btn" onClick={() => 设置显示新建项目弹窗(true)}>
+          <button className={样式.primaryBtn} onClick={() => 设置显示新建项目弹窗(true)}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19" />
               <line x1="5" y1="12" x2="19" y2="12" />
@@ -115,7 +115,7 @@ const AdminGameProjects = () => {
         </div>
       </header>
 
-      <main className="games-main">
+      <main className={样式.gamesMain}>
         {提示信息 && (
           <div className={`toast toast-${提示信息.类型}`}>
             <span>{提示信息.消息}</span>
@@ -123,12 +123,12 @@ const AdminGameProjects = () => {
         )}
 
         {加载中 ? (
-          <div className="loading-state">
-            <div className="spinner" />
+          <div className={样式.loadingState}>
+            <div className={样式.spinner} />
             <p>加载中...</p>
           </div>
         ) : 项目列表.length === 0 ? (
-          <div className="empty-state">
+          <div className={样式.emptyState}>
             <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
               <line x1="8" y1="21" x2="16" y2="21" />
@@ -224,53 +224,53 @@ const AdminGameProjects = () => {
 
       {/* 新建项目弹窗 */}
       {显示新建项目弹窗 && (
-        <div className="modal-overlay" onClick={() => 设置显示新建项目弹窗(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
+        <div className={样式.modalOverlay} onClick={() => 设置显示新建项目弹窗(false)}>
+          <div className={样式.modalContent} onClick={e => e.stopPropagation()}>
+            <div className={样式.modalHeader}>
               <h2>为「{游戏信息?.name}」添加项目</h2>
-              <button className="close-btn" onClick={() => 设置显示新建项目弹窗(false)}>
+              <button className={样式.closeBtn} onClick={() => 设置显示新建项目弹窗(false)}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
               </button>
             </div>
-            <form onSubmit={处理创建项目} className="modal-form">
-              <div className="form-group">
+            <form onSubmit={处理创建项目} className={样式.modalForm}>
+              <div className={样式.formGroup}>
                 <label>项目名称</label>
                 <input name="name" placeholder="例如：排位上分" required />
               </div>
-              <div className="form-group">
+              <div className={样式.formGroup}>
                 <label>项目描述</label>
                 <textarea name="description" placeholder="描述这个服务项目" rows="2" />
               </div>
-              <div className="form-row">
-                <div className="form-group">
+              <div className={样式.formRow}>
+                <div className={样式.formGroup}>
                   <label>价格</label>
-                  <div className="input-with-suffix">
+                  <div className={样式.inputWithSuffix}>
                     <input name="price" type="number" step="0.01" min="0" placeholder="0.00" required />
                     <span>¥</span>
                   </div>
                 </div>
-                <div className="form-group">
+                <div className={样式.formGroup}>
                   <label>单位</label>
                   <input name="unit" placeholder="例如：星、局、天" required />
                 </div>
               </div>
-              <div className="form-group">
+              <div className={样式.formGroup}>
                 <label>图标链接（可选）</label>
                 <input name="icon" placeholder="输入图标 URL" />
               </div>
-              <div className="form-group checkbox-group">
-                <label className="checkbox-label">
+              <div className={样式.checkboxGroup}>
+                <label className={样式.checkboxLabel}>
                   <input name="is_single_per_order" type="checkbox" />
-                  <span className="checkbox-custom" />
+                  <span className={样式.checkboxCustom} />
                   <span>每单限购一个</span>
                 </label>
-                <p className="checkbox-hint">开启后，每个订单中此项目只能下单一个</p>
+                <p className={样式.checkboxHint}>开启后，每个订单中此项目只能下单一个</p>
               </div>
-              <div className="modal-footer">
-                <button type="button" className="cancel-btn" onClick={() => 设置显示新建项目弹窗(false)}>取消</button>
-                <button type="submit" className="primary-btn">确认添加</button>
+              <div className={样式.modalFooter}>
+                <button type="button" className={样式.cancelBtn} onClick={() => 设置显示新建项目弹窗(false)}>取消</button>
+                <button type="submit" className={样式.primaryBtn}>确认添加</button>
               </div>
             </form>
           </div>

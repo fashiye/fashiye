@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import './ForgotPassword.css';
+import 样式 from './ForgotPassword.module.css';
 
 const EMAIL_REGEX = /^\S+@\S+\.\S+$/;
 
@@ -89,12 +89,11 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="forgot-password-container">
-      <div className="forgot-password-card">
-        <h2>找回密码</h2>
-        <p className="subtitle">请输入您的注册邮箱</p>
-
-        <div className="role-selector">
+    <div className={样式.forgotPasswordContainer}>
+      <div className={样式.forgotPasswordCard}>
+        <h2>忘记密码</h2>
+        <p className={样式.subtitle}>请输入您的注册邮箱</p>
+        <div className={样式.roleSelector}>
           {roles.map((roleOption) => (
             <button
               key={roleOption.value}
@@ -106,11 +105,11 @@ const ForgotPassword = () => {
           ))}
         </div>
 
-        <form onSubmit={handleSubmit} className="forgot-password-form">
-          {error && <div className="error-message">{error}</div>}
-          {success && <div className="success-message">{success}</div>}
+        <form onSubmit={handleSubmit} className={样式.forgotPasswordForm}>
+          {error && <div className={样式.errorMessage}>{error}</div>}
+          {success && <div className={样式.successMessage}>{success}</div>}
 
-          <div className="input-group">
+          <div className={样式.inputGroup}>
             <label>邮箱</label>
             <input
               type="email"
@@ -124,15 +123,15 @@ const ForgotPassword = () => {
 
           <button 
             type="submit" 
-            className="submit-btn"
+            className={样式.submitBtn}
             disabled={isLoading}
           >
             {isLoading ? '发送中...' : '发送验证码'}
           </button>
         </form>
 
-        <div className="back-link">
-          <button onClick={handleBackToLogin} className="link-btn">返回登录</button>
+        <div className={样式.backLink}>
+          <button onClick={handleBackToLogin} className={样式.linkBtn}>返回登录</button>
         </div>
       </div>
     </div>

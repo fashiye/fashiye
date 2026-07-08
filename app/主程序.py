@@ -1,7 +1,8 @@
+import asyncio                                           # 提供异步任务管理，用于启动/停止后台日志清理任务
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.核心.配置 import 配置对象
@@ -9,7 +10,7 @@ from app.核心.异常 import 业务逻辑错误, 认证错误
 from app.api.v1.端点 import 认证, 订单, 会话, 游戏, 用户, 数据库管理, 管理员管理, 支付
 from app.服务.验证码服务 import 验证码服务对象
 from app.服务.支付服务 import 支付服务对象
-from app.核心.日志 import 初始化日志记录, 获取日志记录器
+from app.核心.日志 import 初始化日志记录, 获取日志记录器, 启动定期日志清理
 from app.数据库.会话 import 引擎, 数据库基类
 
 初始化日志记录()
@@ -41,8 +42,20 @@ async def 应用生命周期(app: FastAPI):
     except Exception as e:
         日志记录器.error(f"iaitouzi 支付平台配置检查失败: {e}")
 
+    # 启动后台日志清理任务（每小时检查一次，压缩过期日志）
+    日志清理任务 = asyncio.create_task(启动定期日志清理(
+        Path(配置对象.日志目录),
+        配置对象.日志归档天数
+    ))
+
     yield
     日志记录器.info("Application shutting down...")
+    # 取消后台日志清理任务
+    日志清理任务.cancel()
+    try:
+        await 日志清理任务
+    except asyncio.CancelledError:
+        日志记录器.info("Log cleanup task cancelled")
     await 验证码服务对象.关闭()
     日志记录器.info("Application shutdown complete")
 

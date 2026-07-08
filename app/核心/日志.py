@@ -3,6 +3,7 @@ import logging.handlers
 import os
 import gzip
 import shutil
+import asyncio                                           # 提供异步定时任务支持，用于定期清理日志归档
 from datetime import datetime, timedelta
 from pathlib import Path
 from app.核心.配置 import 配置对象
@@ -75,6 +76,7 @@ def _解析日志级别(级别字符串: str) -> int:
 def _清理旧归档(日志目录: Path, 保留天数: int):
     """压缩超过保留天数的旧日志文件"""
     截止日期 = datetime.now() - timedelta(days=保留天数)
+    日志记录器 = logging.getLogger(__name__)
     for 日志文件 in 日志目录.glob("*.log.*"):
         try:
             修改时间 = datetime.fromtimestamp(日志文件.stat().st_mtime)
@@ -84,8 +86,27 @@ def _清理旧归档(日志目录: Path, 保留天数: int):
                     with gzip.open(压缩路径, 'wb') as 输出文件:
                         shutil.copyfileobj(输入文件, 输出文件)
                 日志文件.unlink()
-        except Exception:
-            continue
+                日志记录器.info(f"已压缩并删除归档日志文件: {日志文件}")
+        except Exception as 压缩异常:
+            日志记录器.error(f"处理日志文件 {日志文件} 时出错: {压缩异常}")
+
+
+async def 启动定期日志清理(日志目录: Path, 保留天数: int, 间隔小时: int = 1):
+    """
+    后台任务，定期执行日志归档清理，防止磁盘空间被日志耗尽。
+
+    传入：日志目录（Path），保留天数（int），检查间隔小时（int，默认1）
+    作用：在异步事件循环中每隔interval小时调用一次 _清理旧归档
+    传出：无返回值（无限运行直到任务被取消）
+    """
+    日志记录器 = logging.getLogger(__name__)
+    日志记录器.info(f"日志清理后台任务已启动（间隔{间隔小时}小时，保留{保留天数}天）")
+    while True:
+        try:
+            _清理旧归档(日志目录, 保留天数)
+        except Exception as 任务异常:
+            日志记录器.error(f"日志清理任务异常: {任务异常}")
+        await asyncio.sleep(间隔小时 * 3600)
 
 
 def 获取日志记录器(名称: str) -> logging.Logger:

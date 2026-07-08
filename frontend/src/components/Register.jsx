@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../utils/api';
-import './Register.css';
+import 样式 from './Register.module.css';
 
 const AUTH_CHANGE_EVENT = 'auth:changed';
 
@@ -240,16 +240,15 @@ const Register = () => {
   const passwordStrength = getPasswordStrength(password);
 
   return (
-    <div className="register-container">
-      <div className="register-card">
+    <div className={样式.registerContainer}>
+      <div className={样式.registerCard}>
         <h2>游戏代练交易平台</h2>
-        <p className="subtitle">请选择角色并注册</p>
-
-        <div className="role-selector">
+        <p className={样式.subtitle}>请选择角色并注册</p>
+        <div className={样式.roleSelector}>
           {roles.map((roleOption) => (
             <button
               key={roleOption.value}
-              className={`role-btn ${role === roleOption.value ? 'active' : ''}`}
+              className={`${样式.roleBtn} ${role === roleOption.value ? 样式.active : ''}`}
               onClick={() => setRole(roleOption.value)}
             >
               {roleOption.label}
@@ -271,10 +270,10 @@ const Register = () => {
           </div>
         )}
 
-        <form onSubmit={handleRegister} className="register-form">
-          {error && <div className="error-message">{error}</div>}
+        <form onSubmit={handleRegister} className={样式.registerForm}>
+          {error && <div className={样式.errorMessage}>{error}</div>}
 
-          <div className="input-group">
+          <div className={样式.inputGroup}>
             <label>用户名</label>
             <input
               type="text"
@@ -287,7 +286,7 @@ const Register = () => {
             />
           </div>
 
-          <div className="input-group">
+          <div className={样式.inputGroup}>
             <label>邮箱</label>
             <input
               type="email"
@@ -299,9 +298,9 @@ const Register = () => {
             />
           </div>
 
-          <div className="input-group">
+          <div className={样式.inputGroup}>
             <label>验证码</label>
-            <div className="verification-code-group">
+            <div className={样式.verificationCodeGroup}>
               <input
                 type="text"
                 inputMode="numeric"
@@ -311,23 +310,23 @@ const Register = () => {
                 placeholder="请输入验证码"
                 required
                 disabled={isLoading}
-                className="verification-input"
+                className={样式.verificationInput}
               />
               <button
                 type="button"
                 onClick={handleSendCode}
                 disabled={countdown > 0 || isSendingCode || isLoading || !email}
-                className={`send-code-btn ${countdown > 0 ? 'countdown' : ''}`}
+                className={`${样式.sendCodeBtn} ${countdown > 0 ? 样式.countdown : ''}`}
               >
                 {isSendingCode ? '发送中...' : countdown > 0 ? `${countdown}s后重发` : '发送验证码'}
               </button>
             </div>
             {sentEmail && email === sentEmail && (
-              <div className="hint-message">验证码已发送至 {sentEmail}</div>
+              <div className={样式.hintMessage}>验证码已发送至 {sentEmail}</div>
             )}
           </div>
 
-          <div className="input-group">
+          <div className={样式.inputGroup}>
             <label>手机号（选填）</label>
             <input
               type="tel"
@@ -339,7 +338,7 @@ const Register = () => {
             />
           </div>
 
-          <div className="input-group">
+          <div className={样式.inputGroup}>
             <label>密码</label>
             <input
               type="password"
@@ -351,10 +350,10 @@ const Register = () => {
               placeholder={`至少${PASSWORD_MIN_LENGTH}位，包含字母和数字`}
             />
             {password && (
-              <div className="password-strength">
-                <div className="strength-bar">
+              <div className={样式.passwordStrength}>
+                <div className={样式.strengthBar}>
                   <div 
-                    className="strength-fill"
+                    className={样式.strengthFill}
                     style={{ 
                       width: `${(passwordStrength.level / 3) * 100}%`,
                       backgroundColor: passwordStrength.color 
@@ -370,15 +369,15 @@ const Register = () => {
 
           <button 
             type="submit" 
-            className="register-btn"
+            className={样式.registerBtn}
             disabled={isLoading}
           >
             {isLoading ? '注册中...' : '注册'}
           </button>
         </form>
 
-        <div className="login-link">
-          已有账号？ <button onClick={handleBackToLogin} className="link-btn">立即登录</button>
+        <div className={样式.loginLink}>
+          已有账号？ <button onClick={handleBackToLogin} className={样式.linkBtn}>立即登录</button>
         </div>
       </div>
     </div>

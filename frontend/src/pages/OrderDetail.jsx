@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../utils/api';
 import ChatPanel from '../components/ChatPanel';
-import './OrderDetail.css';
+import styles from './OrderDetail.module.css';
 
 const OrderDetail = () => {
   const { orderId } = useParams();
@@ -119,9 +119,9 @@ const OrderDetail = () => {
 
   if (isLoading) {
     return (
-      <div className="order-detail-container">
-        <div className="order-detail-content">
-          <div className="loading-state">加载中...</div>
+      <div className={styles.orderDetailContainer}>
+        <div className={styles.orderDetailContent}>
+          <div className={styles.loadingState}>加载中...</div>
         </div>
       </div>
     );
@@ -129,11 +129,11 @@ const OrderDetail = () => {
 
   if (error || !order) {
     return (
-      <div className="order-detail-container">
-        <div className="order-detail-content">
-          <div className="error-state">
+      <div className={styles.orderDetailContainer}>
+        <div className={styles.orderDetailContent}>
+          <div className={styles.errorState}>
             <p>{error || '订单不存在'}</p>
-            <button onClick={handleBack} className="back-btn">返回</button>
+            <button onClick={handleBack} className={styles.backBtn}>返回</button>
           </div>
         </div>
       </div>
@@ -141,151 +141,151 @@ const OrderDetail = () => {
   }
 
   return (
-    <div className="order-detail-container">
-      <div className="order-detail-content">
-        <header className="order-detail-header">
-          <div className="header-left">
-            <button onClick={handleBack} className="back-btn">← 返回</button>
+    <div className={styles.orderDetailContainer}>
+      <div className={styles.orderDetailContent}>
+        <header className={styles.orderDetailHeader}>
+          <div className={styles.headerLeft}>
+            <button onClick={handleBack} className={styles.backBtn}>← 返回</button>
             <h1>订单详情</h1>
           </div>
-          <span className={`status-badge ${getStatusClass(order.status)}`}>
+          <span className={`${styles.statusBadge} ${getStatusClass(order.status)}`}>
             {getStatusText(order.status)}
           </span>
         </header>
 
-        <div className="detail-grid">
-          <div className="detail-section">
-            <h2 className="section-title">订单信息</h2>
-            <div className="info-grid">
-              <div className="info-item">
-                <span className="info-label">订单号</span>
-                <span className="info-value order-no">{order.orderNo}</span>
+        <div className={styles.detailGrid}>
+          <div className={styles.detailSection}>
+            <h2 className={styles.sectionTitle}>订单信息</h2>
+            <div className={styles.infoGrid}>
+              <div className={styles.infoItem}>
+                <span className={styles.infoLabel}>订单号</span>
+                <span className={`${styles.infoValue} ${styles.orderNo}`}>{order.orderNo}</span>
               </div>
-              <div className="info-item">
-                <span className="info-label">游戏</span>
-                <span className="info-value">{order.gameName || '-'}</span>
+              <div className={styles.infoItem}>
+                <span className={styles.infoLabel}>游戏</span>
+                <span className={styles.infoValue}>{order.gameName || '-'}</span>
               </div>
-              <div className="info-item">
-                <span className="info-label">总金额</span>
-                <span className="info-value price">¥{order.totalAmount}</span>
+              <div className={styles.infoItem}>
+                <span className={styles.infoLabel}>总金额</span>
+                <span className={`${styles.infoValue} ${styles.price}`}>¥{order.totalAmount}</span>
               </div>
             </div>
           </div>
 
           {/* 项目列表 */}
-          <div className="detail-section">
-            <h2 className="section-title">项目明细</h2>
-            <div className="items-table">
-              <div className="items-header">
-                <span className="item-name">项目名称</span>
-                <span className="item-qty">数量</span>
-                <span className="item-price">单价</span>
-                <span className="item-total">小计</span>
+          <div className={styles.detailSection}>
+            <h2 className={styles.sectionTitle}>项目明细</h2>
+            <div className={styles.itemsTable}>
+              <div className={styles.itemsHeader}>
+                <span className={styles.itemName}>项目名称</span>
+                <span className={styles.itemQty}>数量</span>
+                <span className={styles.itemPrice}>单价</span>
+                <span className={styles.itemTotal}>小计</span>
               </div>
               {order.items && order.items.length > 0 ? (
                 order.items.map((item, index) => (
-                  <div key={index} className="item-row">
-                    <span className="item-name">{item.projectName}</span>
-                    <span className="item-qty">{item.quantity}</span>
-                    <span className="item-price">¥{item.unitPrice}</span>
-                    <span className="item-total">¥{item.totalPrice}</span>
+                  <div key={index} className={styles.itemRow}>
+                    <span className={styles.itemName}>{item.projectName}</span>
+                    <span className={styles.itemQty}>{item.quantity}</span>
+                    <span className={styles.itemPrice}>¥{item.unitPrice}</span>
+                    <span className={styles.itemTotal}>¥{item.totalPrice}</span>
                   </div>
                 ))
               ) : (
-                <div className="item-row">
-                  <span className="item-name">{order.projectName || '-'}</span>
-                  <span className="item-qty">{order.quantity || 1}</span>
-                  <span className="item-price">¥{order.unitPrice || order.totalAmount}</span>
-                  <span className="item-total">¥{order.totalAmount}</span>
+                <div className={styles.itemRow}>
+                  <span className={styles.itemName}>{order.projectName || '-'}</span>
+                  <span className={styles.itemQty}>{order.quantity || 1}</span>
+                  <span className={styles.itemPrice}>¥{order.unitPrice || order.totalAmount}</span>
+                  <span className={styles.itemTotal}>¥{order.totalAmount}</span>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="detail-section">
-            <h2 className="section-title">人员信息</h2>
-            <div className="info-grid">
-              <div className="info-item">
-                <span className="info-label">发单人</span>
-                <span className="info-value">{order.userName || `用户#${order.userId}`}</span>
+          <div className={styles.detailSection}>
+            <h2 className={styles.sectionTitle}>人员信息</h2>
+            <div className={styles.infoGrid}>
+              <div className={styles.infoItem}>
+                <span className={styles.infoLabel}>发单人</span>
+                <span className={styles.infoValue}>{order.userName || `用户#${order.userId}`}</span>
               </div>
-              <div className="info-item">
-                <span className="info-label">接单人</span>
-                <span className="info-value">
+              <div className={styles.infoItem}>
+                <span className={styles.infoLabel}>接单人</span>
+                <span className={styles.infoValue}>
                   {order.handlerName ? order.handlerName : (order.handlerId ? `打手#${order.handlerId}` : '暂无')}
                 </span>
               </div>
             </div>
           </div>
 
-          <div className="detail-section">
-            <h2 className="section-title">账号与备注</h2>
-            <div className="info-list">
-              <div className="info-item-full">
-                <span className="info-label">账号密码</span>
-                <span className="info-value account-info">{order.accountInfo || '未提供'}</span>
+          <div className={styles.detailSection}>
+            <h2 className={styles.sectionTitle}>账号与备注</h2>
+            <div className={styles.infoList}>
+              <div className={styles.infoItemFull}>
+                <span className={styles.infoLabel}>账号密码</span>
+                <span className={`${styles.infoValue} ${styles.accountInfo}`}>{order.accountInfo || '未提供'}</span>
               </div>
-              <div className="info-item-full">
-                <span className="info-label">需求备注</span>
-                <span className="info-value">{order.requirements || '无'}</span>
+              <div className={styles.infoItemFull}>
+                <span className={styles.infoLabel}>需求备注</span>
+                <span className={styles.infoValue}>{order.requirements || '无'}</span>
               </div>
             </div>
           </div>
 
-          <div className="detail-section">
-            <h2 className="section-title">时间记录</h2>
-            <div className="info-grid">
-              <div className="info-item">
-                <span className="info-label">发单时间</span>
-                <span className="info-value">{formatTime(order.createdAt)}</span>
+          <div className={styles.detailSection}>
+            <h2 className={styles.sectionTitle}>时间记录</h2>
+            <div className={styles.infoGrid}>
+              <div className={styles.infoItem}>
+                <span className={styles.infoLabel}>发单时间</span>
+                <span className={styles.infoValue}>{formatTime(order.createdAt)}</span>
               </div>
-              <div className="info-item">
-                <span className="info-label">接单时间</span>
-                <span className="info-value">{formatTime(order.acceptedAt)}</span>
+              <div className={styles.infoItem}>
+                <span className={styles.infoLabel}>接单时间</span>
+                <span className={styles.infoValue}>{formatTime(order.acceptedAt)}</span>
               </div>
-              <div className="info-item">
-                <span className="info-label">完成时间</span>
-                <span className="info-value">{formatTime(order.completedAt)}</span>
+              <div className={styles.infoItem}>
+                <span className={styles.infoLabel}>完成时间</span>
+                <span className={styles.infoValue}>{formatTime(order.completedAt)}</span>
               </div>
-              <div className="info-item">
-                <span className="info-label">取消时间</span>
-                <span className="info-value">{formatTime(order.cancelledAt)}</span>
+              <div className={styles.infoItem}>
+                <span className={styles.infoLabel}>取消时间</span>
+                <span className={styles.infoValue}>{formatTime(order.cancelledAt)}</span>
               </div>
-              <div className="info-item">
-                <span className="info-label">最后更新</span>
-                <span className="info-value">{formatTime(order.updatedAt)}</span>
+              <div className={styles.infoItem}>
+                <span className={styles.infoLabel}>最后更新</span>
+                <span className={styles.infoValue}>{formatTime(order.updatedAt)}</span>
               </div>
             </div>
           </div>
 
           {order.abnormalReason && (
-            <div className="detail-section">
-              <h2 className="section-title">异常信息</h2>
-              <div className="info-list">
-                <div className="info-item-full">
-                  <span className="info-label">异常原因</span>
-                  <span className="info-value" style={{ color: '#d97706' }}>{order.abnormalReason}</span>
+            <div className={styles.detailSection}>
+              <h2 className={styles.sectionTitle}>异常信息</h2>
+              <div className={styles.infoList}>
+                <div className={styles.infoItemFull}>
+                  <span className={styles.infoLabel}>异常原因</span>
+                  <span className={styles.infoValue} style={{ color: '#d97706' }}>{order.abnormalReason}</span>
                 </div>
               </div>
             </div>
           )}
 
           {(order.userComment || order.handlerComment) && (
-            <div className="detail-section">
-              <h2 className="section-title">评价信息</h2>
-              <div className="info-list">
+            <div className={styles.detailSection}>
+              <h2 className={styles.sectionTitle}>评价信息</h2>
+              <div className={styles.infoList}>
                 {order.userComment && (
-                  <div className="info-item-full">
-                    <span className="info-label">发单人评价</span>
-                    <span className="info-value">
+                  <div className={styles.infoItemFull}>
+                    <span className={styles.infoLabel}>发单人评价</span>
+                    <span className={styles.infoValue}>
                       {'⭐'.repeat(order.userRating || 0)} {order.userComment}
                     </span>
                   </div>
                 )}
                 {order.handlerComment && (
-                  <div className="info-item-full">
-                    <span className="info-label">接单人评价</span>
-                    <span className="info-value">
+                  <div className={styles.infoItemFull}>
+                    <span className={styles.infoLabel}>接单人评价</span>
+                    <span className={styles.infoValue}>
                       {'⭐'.repeat(order.handlerRating || 0)} {order.handlerComment}
                     </span>
                   </div>
@@ -294,7 +294,7 @@ const OrderDetail = () => {
             </div>
           )}
 
-          <div className="detail-section chat-section">
+          <div className={`${styles.detailSection} ${styles.chatSection}`}>
             <ChatPanel 
               orderId={parseInt(orderId)} 
               handlerId={order.handlerId} 
@@ -303,21 +303,21 @@ const OrderDetail = () => {
           </div>
         </div>
 
-        <div className="detail-actions">
+        <div className={styles.detailActions}>
           {是发单人(order) && (order.status === 'pending' || order.status === 'pending_review') && (
-            <button onClick={() => navigate(`/payment/${orderId}`)} className="pay-btn">去支付</button>
+            <button onClick={() => navigate(`/payment/${orderId}`)} className={styles.payBtn}>去支付</button>
           )}
           {是发单人(order) && order.status === 'pending' && (
-            <button onClick={handleCancelOrder} className="cancel-btn">取消订单</button>
+            <button onClick={handleCancelOrder} className={styles.cancelBtn}>取消订单</button>
           )}
           {是发单人(order) && order.status === 'review' && (
-            <button onClick={handleConfirmComplete} className="confirm-btn">确认完成</button>
+            <button onClick={handleConfirmComplete} className={styles.confirmBtn}>确认完成</button>
           )}
           {是接单人(order) && order.status === 'accepted' && (
-            <button onClick={handleStartOrder} className="confirm-btn">开始执行</button>
+            <button onClick={handleStartOrder} className={styles.confirmBtn}>开始执行</button>
           )}
           {是接单人(order) && order.status === 'in_progress' && (
-            <button onClick={handleSubmitComplete} className="confirm-btn">提交完成</button>
+            <button onClick={handleSubmitComplete} className={styles.confirmBtn}>提交完成</button>
           )}
         </div>
       </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../utils/api';
-import './ChatPanel.css';
+import 样式 from './ChatPanel.module.css';
 
 const ChatPanel = ({ orderId, handlerId, userId }) => {
   const [messages, setMessages] = useState([]);
@@ -195,12 +195,12 @@ const ChatPanel = ({ orderId, handlerId, userId }) => {
   // 无打手接单时显示占位
   if (!handlerId) {
     return (
-      <div className="chat-panel">
-        <div className="chat-header">
-          <h3>💬 聊天</h3>
+      <div className={样式.chatPanel}>
+        <div className={样式.chatHeader}>
+          <h3>聊天</h3>
         </div>
-        <div className="chat-messages">
-          <div className="no-handler-message">
+        <div className={样式.chatMessages}>
+          <div className={样式.noHandlerMessage}>
             订单尚未被接单，暂无聊天对象
           </div>
         </div>
@@ -210,42 +210,42 @@ const ChatPanel = ({ orderId, handlerId, userId }) => {
 
   if (isLoading) {
     return (
-      <div className="chat-panel">
-        <div className="chat-header">
-          <h3>💬 聊天</h3>
+      <div className={样式.chatPanel}>
+        <div className={样式.chatHeader}>
+          <h3>聊天</h3>
         </div>
-        <div className="chat-messages">
-          <div className="loading-message">加载中...</div>
+        <div className={样式.chatMessages}>
+          <div className={样式.loadingMessage}>加载中...</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="chat-panel">
-      <div className="chat-header">
-        <h3>💬 与{对方显示名}聊天</h3>
+    <div className={样式.chatPanel}>
+      <div className={样式.chatHeader}>
+        <h3>聊天</h3>
       </div>
 
       <div
-        className="chat-messages"
+        className={样式.chatMessages}
         onScroll={handleScroll}
       >
         {messages.length === 0 ? (
-          <div className="no-messages">
+          <div className={样式.noMessages}>
             暂无消息，开始与{对方显示名}沟通吧！
           </div>
         ) : (
           messages.map((msg) => (
             <div
               key={msg.id}
-              className={`message ${msg.senderType === 当前角色 ? 'sent' : 'received'}`}
+              className={`${样式.message} ${msg.senderType === 当前角色 ? 样式.sent : 样式.received}`}
             >
-              <div className="message-sender">{getSenderName(msg.senderType)}</div>
-              <div className="message-content">
+              <div className={样式.messageSender}>{getSenderName(msg.senderType)}</div>
+              <div className={样式.messageContent}>
                 {msg.content}
               </div>
-              <div className="message-time">
+              <div className={样式.messageTime}>
                 {formatTime(msg.createdAt)}
               </div>
             </div>
@@ -254,19 +254,19 @@ const ChatPanel = ({ orderId, handlerId, userId }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      <form onSubmit={handleSendMessage} className="chat-input-form">
+      <form onSubmit={handleSendMessage} className={样式.chatInputForm}>
         <input
           type="text"
           value={newMessage}
           onChange={(e) => setNewMessage(e.target.value)}
           placeholder="输入消息..."
-          className="chat-input"
+          className={样式.chatInput}
           disabled={!hasConversation}
         />
         <button
           type="submit"
           disabled={!newMessage.trim() || isSending || !hasConversation}
-          className="send-btn"
+          className={样式.sendBtn}
         >
           发送
         </button>

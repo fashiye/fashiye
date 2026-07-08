@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update, func, case, and_
+from sqlalchemy import select, update, func, case, and_, or_
 from app.模型.消息 import 会话表, 消息表, 消息阅读状态表
 from app.模式.消息 import 消息创建, 标记已读请求
 from typing import Optional, List
@@ -276,6 +276,90 @@ class 消息服务类:
         )
         结果 = await 数据库.execute(查询)
         return 结果.scalar()
+
+    @staticmethod
+    async def 批量获取未读数量(
+        数据库: AsyncSession,
+        会话IDs: list[int],
+        参与方类型: str,
+        参与方ID: int
+    ) -> dict[int, int]:
+        """
+        批量获取多个会话的未读消息数量（替代循环内逐个查询，消除 N+1）。
+
+        传入：
+            数据库: 异步数据库会话
+            会话IDs: 要查询的会话 ID 列表
+            参与方类型: 参与方角色类型
+            参与方ID: 参与方用户 ID
+        作用：
+            一次性查询所有会话的阅读状态 + 消息计数
+        传出：{会话ID: 未读数量} 字典
+        """
+        if not 会话IDs:
+            return {}
+
+        # 调用库函数：批量查询阅读状态
+        # 传入：会话ID列表、参与方类型和ID作为过滤条件
+        # 作用：查 message_read_status 表，获取用户在每个会话的最后阅读消息ID
+        # 传出：阅读状态记录列表
+        阅读状态查询 = select(消息阅读状态表).where(
+            消息阅读状态表.会话ID.in_(会话IDs),
+            消息阅读状态表.参与方类型 == 参与方类型,
+            消息阅读状态表.参与方ID == 参与方ID
+        )
+        阅读状态结果 = await 数据库.execute(阅读状态查询)
+        阅读状态列表 = 阅读状态结果.scalars().all()
+        阅读状态映射: dict[int, int] = {s.会话ID: s.最后阅读消息ID for s in 阅读状态列表}
+
+        结果: dict[int, int] = {}
+        有阅读会话: list[int] = []
+        无阅读会话: list[int] = []
+        for cid in 会话IDs:
+            if cid in 阅读状态映射:
+                有阅读会话.append(cid)
+            else:
+                无阅读会话.append(cid)
+
+        # 没有阅读记录的会话 → 全部消息都是未读
+        if 无阅读会话:
+            # 调用库函数：按会话分组统计消息总数
+            # 传入：无阅读状态的会话ID列表
+            # 作用：统计这些会话各自的全部消息数
+            # 传出：[(会话ID, 消息数)] 行集
+            总数查询 = select(消息表.会话ID, func.count(消息表.id)).where(
+                消息表.会话ID.in_(无阅读会话)
+            ).group_by(消息表.会话ID)
+            总数结果 = await 数据库.execute(总数查询)
+            for row in 总数结果:
+                结果[row[0]] = row[1]
+            # 没有消息的会话设为 0
+            for cid in 无阅读会话:
+                if cid not in 结果:
+                    结果[cid] = 0
+
+        # 有阅读记录的会话 → 统计 ID > 最后阅读ID 的消息
+        if 有阅读会话:
+            # 用 OR 条件一次查所有有阅读状态的会话的未读数
+            条件列表 = [
+                and_(消息表.会话ID == cid, 消息表.id > 阅读状态映射[cid])
+                for cid in 有阅读会话
+            ]
+            # 调用库函数：按会话分组统计未读消息
+            # 传入：OR 条件(会话ID+最后阅读ID 配对)
+            # 作用：一次性统计多个会话中超过最后阅读ID的消息数
+            # 传出：[(会话ID, 未读数)] 行集
+            未读查询 = select(消息表.会话ID, func.count(消息表.id)).where(
+                or_(*条件列表)
+            ).group_by(消息表.会话ID)
+            未读结果 = await 数据库.execute(未读查询)
+            for row in 未读结果:
+                结果[row[0]] = row[1]
+            for cid in 有阅读会话:
+                if cid not in 结果:
+                    结果[cid] = 0
+
+        return 结果
 
 
 消息服务 = 消息服务类()

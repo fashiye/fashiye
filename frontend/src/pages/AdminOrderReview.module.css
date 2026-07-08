@@ -1,0 +1,320 @@
+.adminOrderReviewContainer {
+  min-height: 100vh;
+  background: linear-gradient(145deg, #f1f5f9 0%, #e6edf4 100%);
+  padding: 24px;
+  position: relative;
+}
+
+.adminOrderReviewContainer::before {
+  content: '';
+  position: fixed;
+  top: -15%;
+  left: -5%;
+  width: 40%;
+  height: 60%;
+  background: radial-gradient(ellipse, rgba(99, 102, 241, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.adminOrderReviewContent {
+  max-width: 1000px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  position: relative;
+  z-index: 1;
+}
+
+.adminOrderReviewHeader {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: white;
+  padding: 24px 32px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.adminOrderReviewHeader h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.backBtn {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 8px 18px;
+  border-radius: 40px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.backBtn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.errorMessage {
+  background: #fef2f2;
+  color: #ef4444;
+  padding: 14px 20px;
+  margin: 20px 32px 0;
+  border-radius: 20px;
+  font-size: 14px;
+  border-left: 4px solid #ef4444;
+  border: 1px solid #fecaca;
+}
+
+.loadingState,
+.emptyState {
+  text-align: center;
+  padding: 80px 20px;
+  color: #9ca3af;
+}
+
+.ordersList {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.orderCard {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 8px 20px -6px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.orderCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 30px -12px rgba(0, 0, 0, 0.15);
+}
+
+.orderHeader {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(203, 213, 225, 0.4);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.orderTitle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.orderTitle h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.statusBadge {
+  padding: 5px 14px;
+  border-radius: 40px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  background: white;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.statusPendingReview {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fed7aa;
+}
+
+.orderDate {
+  font-size: 13px;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.orderBody {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.orderInfo {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.infoLabel {
+  min-width: 90px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+
+.infoValue {
+  font-size: 14px;
+  color: #1f2937;
+  flex: 1;
+  line-height: 1.6;
+}
+
+.price {
+  color: #ef4444;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.itemSummary {
+  color: #374151;
+  font-weight: 500;
+}
+
+.orderActions {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(203, 213, 225, 0.4);
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.viewBtn {
+  padding: 8px 16px;
+  background: white;
+  color: #6366f1;
+  border: 1.5px solid #6366f1;
+  border-radius: 40px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.viewBtn:hover {
+  background: #6366f1;
+  color: white;
+}
+
+.approveBtn {
+  padding: 8px 20px;
+  background: linear-gradient(135deg, #10b981, #34d399);
+  color: white;
+  border: none;
+  border-radius: 40px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.approveBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35);
+}
+
+.rejectBtn {
+  padding: 8px 20px;
+  background: linear-gradient(135deg, #ef4444, #f87171);
+  color: white;
+  border: none;
+  border-radius: 40px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.25);
+}
+
+.rejectBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.35);
+}
+
+.pagination {
+  padding: 24px 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  border-top: 1px solid rgba(203, 213, 225, 0.3);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.pageBtn {
+  padding: 8px 20px;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(4px);
+  color: #4b5563;
+  border: 1px solid #e2e8f0;
+  border-radius: 40px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pageBtn:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.pageBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pageInfo {
+  font-size: 14px;
+  color: #6b7280;
+  font-weight: 600;
+  min-width: 80px;
+  text-align: center;
+}
+
+@media (max-width: 768px) {
+  .adminOrderReviewContainer {
+    padding: 0;
+  }
+  .adminOrderReviewContent {
+    border-radius: 0;
+    border: none;
+  }
+  .adminOrderReviewHeader {
+    padding: 20px;
+  }
+  .ordersList {
+    padding: 20px;
+  }
+  .orderHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .orderActions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+  .viewBtn, .approveBtn, .rejectBtn {
+    width: 100%;
+    text-align: center;
+  }
+  .pagination {
+    padding: 20px;
+  }
+}
