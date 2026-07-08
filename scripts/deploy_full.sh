@@ -8,12 +8,22 @@ set -e
 
 # ============ 可配置参数 ============
 APP_NAME="fashiye"
-APP_DIR="/opt/fashiye"                                # 项目安装目录
-LOG_DIR="/var/log/fashiye"                            # 日志目录
-PID_DIR="/var/run/fashiye"                            # PID目录
-BACKUP_DIR="/var/backups/fashiye"                     # 备份目录
+BAOTA_MODE=true                                       # 宝塔面板模式（使用宝塔路径和管理）
+if [ "$BAOTA_MODE" = true ]; then
+    APP_DIR="/www/wwwroot/fashiye"                    # 宝塔站点目录
+    LOG_DIR="/www/wwwroot/fashiye/logs"               # 日志目录
+    PID_DIR="/www/wwwroot/fashiye/run"                # PID目录
+    BACKUP_DIR="/www/wwwroot/fashiye/backups"         # 备份目录
+    MYSQL_ROOT_PASSWORD="admin"                       # 宝塔MySQL默认root密码
+    BAOTA_NGINX_VHOST="/www/server/panel/vhost/nginx" # 宝塔Nginx站点配置目录
+else
+    APP_DIR="/opt/fashiye"                            # 项目安装目录
+    LOG_DIR="/var/log/fashiye"                        # 日志目录
+    PID_DIR="/var/run/fashiye"                        # PID目录
+    BACKUP_DIR="/var/backups/fashiye"                 # 备份目录
+    MYSQL_ROOT_PASSWORD=""                            # MySQL root密码（留空自动生成）
+fi
 
-MYSQL_ROOT_PASSWORD=""                                # MySQL root密码（留空自动生成）
 MYSQL_APP_USER="fashiye"                              # MySQL应用用户名
 MYSQL_APP_PASSWORD=""                                 # MySQL应用用户密码（留空自动生成）
 MYSQL_DB_NAME="dailiang_01"                           # 数据库名
@@ -204,59 +214,82 @@ fi
     echo "[4/9] 安装并配置 MySQL 8.0..."
     echo "────────────────────────────────────────"
 
-    # 检查 MySQL 是否已安装
-    if command -v mysql >/dev/null 2>&1; then
-        echo "✅ MySQL 已安装，跳过安装步骤"
+    if [ "$BAOTA_MODE" = true ]; then
+        echo "ℹ️  宝塔面板模式：跳过 MySQL 安装"
     else
-        echo "安装 MySQL..."
-        if [ "$OS_FAMILY" = "debian" ]; then
-            $PKG_INSTALL $MYSQL_PKG 2>&1 | tail -5
-            # 启动
-            systemctl enable --now mysql 2>/dev/null || systemctl enable --now mysqld 2>/dev/null || true
+        # 检查 MySQL 是否已安装
+        if command -v mysql >/dev/null 2>&1; then
+            echo "✅ MySQL 已安装，跳过安装步骤"
         else
-            # RHEL 系需要启用 MySQL 8.0 模块
-            if command -v dnf >/dev/null 2>&1; then
-                dnf module enable -y mysql 2>&1 | tail -3 || true
+            echo "安装 MySQL..."
+            if [ "$OS_FAMILY" = "debian" ]; then
+                $PKG_INSTALL $MYSQL_PKG 2>&1 | tail -5
+                systemctl enable --now mysql 2>/dev/null || systemctl enable --now mysqld 2>/dev/null || true
+            else
+                if command -v dnf >/dev/null 2>&1; then
+                    dnf module enable -y mysql 2>&1 | tail -3 || true
+                fi
+                $PKG_INSTALL $MYSQL_PKG 2>&1 | tail -5
+                systemctl enable --now mysqld 2>/dev/null || systemctl enable --now mysql 2>/dev/null || true
             fi
-            $PKG_INSTALL $MYSQL_PKG 2>&1 | tail -5
-            systemctl enable --now mysqld 2>/dev/null || systemctl enable --now mysql 2>/dev/null || true
+            sleep 3
         fi
-        sleep 3
+
+        # 确保 MySQL 已启动
+        systemctl start mysql 2>/dev/null || systemctl start mysqld 2>/dev/null || true
+        sleep 2
     fi
 
-    # 确保 MySQL 已启动
-    systemctl start mysql 2>/dev/null || systemctl start mysqld 2>/dev/null || true
-    sleep 2
-
-    # 生成密码（如为空）
-    if [ -z "$MYSQL_ROOT_PASSWORD" ]; then
-        MYSQL_ROOT_PASSWORD=$(生成随机密码 16)
-        echo "ℹ️  自动生成 MySQL root 密码: $MYSQL_ROOT_PASSWORD"
+    # 生成密码（如为空且非常模式）
+    if [ "$BAOTA_MODE" != true ]; then
+        if [ -z "$MYSQL_ROOT_PASSWORD" ]; then
+            MYSQL_ROOT_PASSWORD=$(生成随机密码 16)
+            echo "ℹ️  自动生成 MySQL root 密码: $MYSQL_ROOT_PASSWORD"
+        fi
     fi
     if [ -z "$MYSQL_APP_PASSWORD" ]; then
         MYSQL_APP_PASSWORD=$(生成随机密码 16)
         echo "ℹ️  自动生成 MySQL 应用用户密码: $MYSQL_APP_PASSWORD"
     fi
 
-    # 尝试安全初始化（首次安装时root无密码）
+    # 配置数据库和用户
     echo "配置 MySQL 数据库和用户..."
     # 调用库命令：执行 MySQL 命令
-    # 传入：-u root, -e "SQL 语句"
+    # 传入：-u root, -p密码, -e "SQL 语句"
     # 作用：创建数据库、创建用户、授权、刷新权限
     # 传出：SQL 执行结果
-    mysql -u root -e "
+    MYSQL_CMD="
         CREATE DATABASE IF NOT EXISTS ${MYSQL_DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
         CREATE USER IF NOT EXISTS '${MYSQL_APP_USER}'@'localhost' IDENTIFIED BY '${MYSQL_APP_PASSWORD}';
         GRANT ALL PRIVILEGES ON ${MYSQL_DB_NAME}.* TO '${MYSQL_APP_USER}'@'localhost';
         FLUSH PRIVILEGES;
-    " 2>/dev/null || \
-    mysql -u root -p"$MYSQL_ROOT_PASSWORD" -e "
-        CREATE DATABASE IF NOT EXISTS ${MYSQL_DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-        CREATE USER IF NOT EXISTS '${MYSQL_APP_USER}'@'localhost' IDENTIFIED BY '${MYSQL_APP_PASSWORD}';
-        GRANT ALL PRIVILEGES ON ${MYSQL_DB_NAME}.* TO '${MYSQL_APP_USER}'@'localhost';
-        FLUSH PRIVILEGES;
-    " 2>/dev/null || \
-    echo "⚠️  MySQL 配置需要手动完成（可能已有root密码或需要 sudo mysql 登录）"
+    "
+
+    # 依次尝试多种方式连接 MySQL
+    连接成功=false
+    for 尝试密码 in "" "$MYSQL_ROOT_PASSWORD" "admin" "root"; do
+        if [ "$连接成功" = true ]; then break; fi
+        if [ -z "$尝试密码" ]; then
+            # 无密码尝试
+            # 调用库命令：mysql 命令行客户端
+            # 传入：-u root, -e "SQL"
+            # 作用：执行建库建用户 SQL
+            # 传出：执行结果
+            echo "  → 尝试无密码登录..."
+            mysql -u root -e "$MYSQL_CMD" 2>/dev/null && { echo "  ✅ 无密码登录成功"; 连接成功=true; break; }
+        else
+            # 有密码尝试
+            echo "  → 尝试密码登录 (root / ${尝试密码})..."
+            mysql -u root -p"${尝试密码}" -e "$MYSQL_CMD" 2>/dev/null && { echo "  ✅ 密码登录成功"; MYSQL_ROOT_PASSWORD="${尝试密码}"; 连接成功=true; break; }
+        fi
+    done
+
+    if [ "$连接成功" != true ]; then
+        echo "⚠️  MySQL 配置失败，请手动执行以下 SQL:"
+        echo "  mysql -u root -p"
+        echo "  $MYSQL_CMD"
+        echo "  或使用宝塔面板 → 数据库 → 创建数据库 '${MYSQL_DB_NAME}' 和用户 '${MYSQL_APP_USER}'"
+    fi
 
     echo "✅ MySQL 配置完成"
     echo "  数据库名: $MYSQL_DB_NAME"
@@ -502,17 +535,27 @@ asyncio.run(建表())
     echo "[9/9] 配置 Nginx 和 systemd 服务..."
     echo "────────────────────────────────────────"
 
-    # 安装 Nginx
-    if ! command -v nginx >/dev/null 2>&1; then
-        echo "安装 Nginx..."
-        $PKG_INSTALL $NGINX_PKG 2>&1 | tail -3
-    fi
-    echo "✅ Nginx 已安装"
+    # --- Nginx 配置（宝塔模式用宝塔目录，普通模式安装+配置） ---
+    if [ "$BAOTA_MODE" = true ]; then
+        echo "ℹ️  宝塔面板模式：跳过 Nginx 安装"
+        # 宝塔的 Nginx 配置文件目录
+        NGINX_CONF_DIR="$BAOTA_NGINX_VHOST"
+        mkdir -p "$NGINX_CONF_DIR"
+        NGINX_CONF_FILE="${NGINX_CONF_DIR}/${APP_NAME}.conf"
+    else
+        # 安装 Nginx
+        if ! command -v nginx >/dev/null 2>&1; then
+            echo "安装 Nginx..."
+            $PKG_INSTALL $NGINX_PKG 2>&1 | tail -3
+        fi
+        echo "✅ Nginx 已安装"
 
-    # 写 Nginx 配置
-    NGINX_CONF_FILE="/etc/nginx/sites-available/$APP_NAME"
-    if [ "$OS_FAMILY" = "rhel" ]; then
-        NGINX_CONF_FILE="/etc/nginx/conf.d/${APP_NAME}.conf"
+        NGINX_CONF_FILE="/etc/nginx/sites-available/$APP_NAME"
+        if [ "$OS_FAMILY" = "rhel" ]; then
+            NGINX_CONF_FILE="/etc/nginx/conf.d/${APP_NAME}.conf"
+        fi
+        # 确保配置目录存在
+        mkdir -p "$(dirname "$NGINX_CONF_FILE")"
     fi
 
     echo "生成 Nginx 配置: $NGINX_CONF_FILE"
@@ -520,38 +563,38 @@ asyncio.run(建表())
     # 处理域名/IP的 HTTP-only 配置（无SSL证书，避免SSL启动失败）
     if [ -z "$DOMAIN" ]; then
         # === 无域名，使用 IP，纯 HTTP 模式 ===
-        cat > "$NGINX_CONF_FILE" <<'NGINX_IP'
+        cat > "$NGINX_CONF_FILE" <<NGINX_IP
 upstream fashiye_backend {
     server 127.0.0.1:8888;
     keepalive 32;
 }
 
 server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
+    listen 80;
+    listen [::]:80;
     server_name _;
 
     client_max_body_size 50m;
 
     # 日志
-    access_log /var/log/nginx/fashiye_access.log;
-    error_log  /var/log/nginx/fashiye_error.log;
+    access_log ${LOG_DIR}/nginx_access.log;
+    error_log  ${LOG_DIR}/nginx_error.log;
 
     # ============ 前端静态文件 ============
     location / {
-        root /opt/fashiye/frontend/dist;
+        root ${APP_DIR}/frontend/dist;
         index index.html;
-        try_files $uri $uri/ /index.html;
+        try_files \$uri \$uri/ /index.html;
     }
 
     # ============ API 反向代理 ============
     location /api/ {
         proxy_pass http://fashiye_backend;
         proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_set_header Connection "";
 
         proxy_connect_timeout 60s;
@@ -567,18 +610,18 @@ server {
     location /ws/ {
         proxy_pass http://fashiye_backend;
         proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
         proxy_read_timeout 3600s;
     }
 
     # ============ 静态资源缓存 ============
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        root /opt/fashiye/frontend/dist;
+        root ${APP_DIR}/frontend/dist;
         expires 30d;
         add_header Cache-Control "public, immutable";
     }
@@ -628,29 +671,26 @@ NGINX_DOMAIN
         echo "  → 使用域名模式: $DOMAIN（部署后建议手动运行 certbot --nginx -d $DOMAIN 开启HTTPS）"
     fi
 
-    # Debian/Ubuntu：启用站点，禁用默认
-    if [ "$OS_FAMILY" = "debian" ]; then
-        # 调用库命令：创建符号链接
-        # 传入：-sf 源 目标
-        # 作用：将 sites-available 的配置软链接到 sites-enabled，使其生效
-        # 传出：无返回值
-        ln -sf "$NGINX_CONF_FILE" "/etc/nginx/sites-enabled/$APP_NAME"
-        # 禁用默认站点（避免冲突）
-        rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
-    fi
+    # 非宝塔模式：启用站点
+    if [ "$BAOTA_MODE" != true ]; then
+        # Debian/Ubuntu：启用站点，禁用默认
+        if [ "$OS_FAMILY" = "debian" ]; then
+            ln -sf "$NGINX_CONF_FILE" "/etc/nginx/sites-enabled/$APP_NAME"
+            rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
+        fi
 
-    # 测试 nginx 配置
-    # 调用库命令：Nginx 配置测试
-    # 传入：-t
-    # 作用：检查所有 nginx 配置文件语法是否正确
-    # 传出：退出码 0 表示成功
-    if nginx -t 2>&1 | grep -q "syntax is ok\|test is successful"; then
-        echo "✅ Nginx 配置语法正确"
-        systemctl enable nginx 2>/dev/null || true
-        systemctl reload nginx 2>/dev/null || systemctl restart nginx 2>/dev/null || true
+        # 测试 nginx 配置
+        if nginx -t 2>&1 | grep -q "syntax is ok\|test is successful"; then
+            echo "✅ Nginx 配置语法正确"
+            systemctl enable nginx 2>/dev/null || true
+            systemctl reload nginx 2>/dev/null || systemctl restart nginx 2>/dev/null || true
+        else
+            echo "⚠️  Nginx 配置有问题，请手动检查:"
+            nginx -t 2>&1
+        fi
     else
-        echo "⚠️  Nginx 配置有问题，请手动检查:"
-        nginx -t 2>&1
+        echo "ℹ️  宝塔模式：Nginx 配置已生成到 ${NGINX_CONF_FILE}"
+        echo "   请在宝塔面板 → 网站 → 添加站点（或配置已有站点），使用此配置内容"
     fi
 
     # ---- 配置 systemd 服务 ----
@@ -757,12 +797,54 @@ SERVICE_EOF
     fi
 
     # 重启 Nginx 最终确认
-    systemctl restart nginx 2>/dev/null || true
-    if systemctl is-active --quiet nginx; then
-        echo "✅ Nginx 服务: 运行中"
+    if [ "$BAOTA_MODE" != true ]; then
+        systemctl restart nginx 2>/dev/null || true
+        if systemctl is-active --quiet nginx; then
+            echo "✅ Nginx 服务: 运行中"
+        else
+            echo "⚠️  Nginx 未运行，请检查"
+        fi
     else
-        echo "⚠️  Nginx 未运行，请检查"
+        echo "ℹ️  宝塔模式：请在宝塔面板中重载 Nginx 使配置生效"
     fi
+}
+
+# ---------- 10. 配置自动更新（cron 定时从 GitHub 拉取） ----------
+步骤10_配置自动更新() {
+    echo ""
+    echo "[10/10] 配置自动更新（cron 定时任务）..."
+    echo "────────────────────────────────────────"
+
+    AUTO_SCRIPT="${APP_DIR}/scripts/auto_update.sh"
+
+    # 确保脚本存在
+    if [ -f "$AUTO_SCRIPT" ]; then
+        chmod +x "$AUTO_SCRIPT"
+        echo "✅ 自动更新脚本已就绪: $AUTO_SCRIPT"
+    else
+        echo "⚠️  未找到 $AUTO_SCRIPT，跳过自动更新配置"
+        return
+    fi
+
+    # 写入 cron 任务（每小时执行一次）
+    # 调用库命令：crontab -l 列出当前 crontab
+    # 传入：-l
+    # 作用：列出当前用户的 crontab 内容，用于检查是否已有该任务
+    # 传出：crontab 内容
+    定时任务内容=$(crontab -l 2>/dev/null || echo "")
+    if echo "$定时任务内容" | grep -q "auto_update.sh"; then
+        echo "ℹ️  自动更新定时任务已存在，跳过"
+    else
+        # 调用库命令：crontab 写入
+        # 传入：临时文件或管道
+        # 作用：在 crontab 中追加一行，每小时执行一次 auto_update.sh
+        # 传出：无返回值
+        (echo "$定时任务内容"; echo "0 * * * * cd ${APP_DIR} && bash ${AUTO_SCRIPT} >> ${LOG_DIR}/cron_auto_update.log 2>&1") | crontab -
+        echo "✅ 已添加 cron 定时任务：每小时检查更新"
+    fi
+
+    echo "   手动执行: bash $AUTO_SCRIPT"
+    echo "   查看日志: tail -f ${LOG_DIR}/auto_update.log"
 }
 
 # ==================== 主流程 ====================
@@ -777,6 +859,7 @@ SERVICE_EOF
 步骤7_安装Python依赖
 步骤8_同步数据库构建前端
 步骤9_配置Nginx和Systemd
+步骤10_配置自动更新
 
 # ==================== 总结输出 ====================
 SERVER_IP_FINAL=$(curl -s --connect-timeout 5 https://ifconfig.me 2>/dev/null || echo "你的服务器IP")
@@ -793,11 +876,15 @@ if [ -n "$DOMAIN" ]; then
 fi
 echo ""
 echo "📋 常用命令:"
-echo "   查看状态:  systemctl status ${APP_NAME} nginx"
+if [ "$BAOTA_MODE" != true ]; then
+    echo "   查看状态:  systemctl status ${APP_NAME} nginx"
+fi
 echo "   重启服务:  systemctl restart ${APP_NAME}"
 echo "   实时日志:  journalctl -u ${APP_NAME} -f"
 echo "   访问日志:  tail -f ${LOG_DIR}/access.log"
 echo "   错误日志:  tail -f ${LOG_DIR}/error.log"
+echo "   自动更新日志: tail -f ${LOG_DIR}/auto_update.log"
+echo "   手动更新:  bash ${APP_DIR}/scripts/auto_update.sh"
 echo "   备份数据:  bash ${APP_DIR}/scripts/backup.sh"
 echo ""
 echo "🔐 重要凭据（请妥善保存）:"
